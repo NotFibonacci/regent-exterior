@@ -1,7 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { buildWorld } from './world';
+import { buildWorld, GROUP, GROUP_COUNT } from './world';
 import { startTimeline, state } from './timeline';
 
 // Camera keyframes, one per scene section. Dollies only: the camera never
@@ -21,10 +21,19 @@ function Rig() {
   const { camera, gl, size } = useThree();
   const pointer = useRef({ x: 0, y: 0, used: false });
   const tgt = useRef(new THREE.Vector3(...KEYS[0].t));
-  const cur = useRef(new THREE.Vector3(-2, 2.6, 5.5));
+  const cur = useRef(new THREE.Vector3(-2, 2.6, 6.4));
   const announced = useRef(false);
+  // Depth map for the visitor's light: the one shadow caster in the scene.
+  const shadow = useMemo(() => {
+    const px = window.matchMedia('(pointer: coarse)').matches ? 512 : 1024;
+    const rt = new THREE.WebGLRenderTarget(px, px, { depthTexture: new THREE.DepthTexture(px, px) });
+    const cam = new THREE.PerspectiveCamera(128, 1, 0.3, 45);
+    const mat = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
+    return { rt, cam, mat };
+  }, []);
+  useEffect(() => () => shadow.rt.dispose(), [shadow]);
   const tmp = useMemo(
-    () => ({ p: new THREE.Vector3(), t: new THREE.Vector3(), ray: new THREE.Raycaster(), hit: new THREE.Vector3(), plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), -5.5), ndc: new THREE.Vector2() }),
+    () => ({ p: new THREE.Vector3(), t: new THREE.Vector3(), ray: new THREE.Raycaster(), hit: new THREE.Vector3(), plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), -6.4), ndc: new THREE.Vector2() }),
     [],
   );
 
@@ -80,18 +89,34 @@ function Rig() {
       }
     } else {
       const t = s.clock.elapsedTime;
-      tmp.hit.set(-2.2 + Math.sin(t * 0.28) * 4.6, 2.7 + Math.sin(t * 0.43) * 1.3, 5.5);
+      tmp.hit.set(-2.2 + Math.sin(t * 0.28) * 4.6, 2.7 + Math.sin(t * 0.43) * 1.3, 6.4);
     }
     cur.current.lerp(tmp.hit, state.reduced ? 1 : 1 - Math.exp(-d * 7));
 
     // Uniforms.
     const u = world.shared;
     u.uCur.value.copy(cur.current);
-    u.uCurInt.value = state.reduced ? 2.0 : 3.0;
+    u.uCurInt.value = state.reduced ? 2.4 : 3.4;
     u.uNight.value = state.night;
-    u.uHoliday.value = state.groups[4];
+    u.uHoliday.value = state.groups[GROUP.holiday];
+    state.groups[GROUP.entry] = 0.35 + 0.65 * state.night;
     world.fixtures.forEach((fx, n) => (u.uLInt.value[n] = fx.power * state.groups[fx.group]));
-    for (let g = 0; g < 5; g++) world.haloUniforms.uG.value[g] = state.groups[g];
+    for (let g = 0; g < GROUP_COUNT; g++) world.haloUniforms.uG.value[g] = state.groups[g];
+
+    // Shadow pass: draw the scene's depth from the visitor's light.
+    shadow.cam.position.copy(cur.current);
+    shadow.cam.lookAt(cur.current.x * 0.8 - 0.4, cur.current.y * 0.8 + 0.4, 0);
+    shadow.cam.updateMatrixWorld();
+    u.uShadowVP.value.multiplyMatrices(shadow.cam.projectionMatrix, shadow.cam.matrixWorldInverse);
+    world.sky.visible = world.halos.visible = false;
+    s.scene.overrideMaterial = shadow.mat;
+    gl.setRenderTarget(shadow.rt);
+    gl.clear();
+    gl.render(s.scene, shadow.cam);
+    gl.setRenderTarget(null);
+    s.scene.overrideMaterial = null;
+    world.sky.visible = world.halos.visible = true;
+    u.uShadowMap.value = shadow.rt.depthTexture;
     world.haloUniforms.uPx.value = (gl.domElement.height * 0.5) / Math.tan((cam.fov * Math.PI) / 360);
 
     if (!announced.current) {

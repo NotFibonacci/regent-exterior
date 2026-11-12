@@ -1,20 +1,22 @@
-// One material for every surface of the maquette. All lighting is analytic:
-// cone fixtures, the visitor's light, a cool moon rim and sky ambient.
-// No three.js lights are used, so cost is fixed and predictable.
+// One material for every surface of the house model. All lighting is
+// analytic: cone fixtures, the visitor's light (with a shadow map), a cool
+// moon rim and sky ambient. No three.js lights are used, so cost is fixed.
 
 export const MAX_LIGHTS = 16;
 
 export const KIND = {
-  plaster: 0,
+  trimFlat: 0,
   stone: 1,
   siding: 2,
   roof: 3,
-  slate: 4,
+  lawn: 4,
   glass: 5,
-  trim: 6,
-  door: 7,
+  trim: 6, // white trim and gutters; turns to brass on the Gutters page
+  dark: 7, // door, shutters, ironwork
   foliage: 8,
   path: 9,
+  bark: 10,
+  mulch: 11,
 } as const;
 
 export const surfaceVertex = /* glsl */ `
@@ -36,6 +38,8 @@ uniform float uLCos[NL];
 uniform float uLInt[NL];
 uniform vec3 uCur;
 uniform float uCurInt;
+uniform mat4 uShadowVP;
+uniform sampler2D uShadowMap;
 uniform float uNight;
 uniform float uHoliday;
 uniform vec3 uMoonDir;
@@ -63,36 +67,41 @@ float vnoise(vec2 p) {
 // distant siding and shingles go smooth instead of shimmering.
 float lod(float c) { return 1.0 - smoothstep(0.12, 0.36, fwidth(c)); }
 
-// Coursed stone: rows of uneven blocks, each row offset. Returns height
-// (0 in the mortar joint) and a per-block id for tonal variation.
-float stoneH(vec2 uv, out float id) {
-  float rh = 0.26;
+// Coursed fieldstone. Joints along a course are pushed around by noise so
+// no two stones are the same width. Returns height (0 in the mortar) and
+// two ids per stone for colour.
+float stoneH(vec2 uv, float rh, out vec2 id) {
   float row = floor(uv.y / rh);
-  float w = 0.40 + 0.26 * hash(vec2(row, 3.0));
-  float x = uv.x / w + hash(vec2(row, 7.0)) * 0.7;
-  id = hash(vec2(floor(x), row));
-  vec2 f = vec2(fract(x) * w, fract(uv.y / rh) * rh);
-  vec2 d = min(f, vec2(w, rh) - f);
-  return smoothstep(0.0, 0.045, min(d.x, d.y)) * (0.7 + 0.3 * id);
+  float x = uv.x / (rh * 2.3) + hash(vec2(row, 7.0)) * 5.0;
+  x += 0.42 * vnoise(vec2(x * 0.9, row * 3.7));
+  float col = floor(x);
+  id = vec2(hash(vec2(col, row)), hash(vec2(row + 31.0, col)));
+  float fx = fract(x), fy = fract(uv.y / rh);
+  float e = min(min(fx, 1.0 - fx) * 2.3, min(fy, 1.0 - fy)) * rh;
+  return smoothstep(0.0, 0.028, e);
 }
 
-// Lap siding: each board is proud at its bottom edge and falls back toward
-// the top, so a light from below catches every lap.
-float sidingH(vec2 uv) {
-  float f = fract(uv.y / 0.19);
-  return (1.0 - f) * smoothstep(0.0, 0.07, f);
+float sdRect(vec2 p, vec2 c, vec2 h) {
+  vec2 d = abs(p - c) - h;
+  return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-float shingleH(vec2 uv, out float id) {
-  float rh = 0.21;
-  float row = floor(uv.y / rh);
-  float x = uv.x / 0.32 + hash(vec2(row, 1.0));
-  id = hash(vec2(floor(x), row));
-  float f = fract(uv.y / rh);
-  float lap = (1.0 - f) * smoothstep(0.0, 0.08, f);
-  float fx = fract(x);
-  float cut = smoothstep(0.0, 0.06, min(fx, 1.0 - fx));
-  return lap * (0.75 + 0.25 * cut) + id * 0.12;
+// The visitor's light casts real shadows: a depth map rendered from the
+// light, sampled with a 3x3 filter. Outside the map's view the light is
+// too weak to matter, so those points read as unshadowed.
+float curShadow(vec3 P, vec3 N) {
+  vec4 sc = uShadowVP * vec4(P + N * 0.035, 1.0);
+  if (sc.w <= 0.0) return 1.0;
+  vec3 s = sc.xyz / sc.w * 0.5 + 0.5;
+  if (s.x < 0.0 || s.x > 1.0 || s.y < 0.0 || s.y > 1.0 || s.z > 1.0) return 1.0;
+  float lit = 0.0;
+  for (int x = -1; x <= 1; x++) {
+    for (int y = -1; y <= 1; y++) {
+      float d = texture2D(uShadowMap, s.xy + vec2(float(x), float(y)) * (1.4 / 1024.0)).r;
+      lit += step(s.z - 0.0007, d);
+    }
+  }
+  return lit / 9.0;
 }
 
 void main() {
@@ -100,55 +109,75 @@ void main() {
   vec3 Ng = normalize(vN);
 
   // Surface coordinates: u runs along the wall, v up it (or down the slope for roofs).
-  vec3 T = abs(Ng.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : normalize(cross(vec3(0.0, 1.0, 0.0), Ng));
-  vec2 uv = vec2(dot(P, T), P.y);
-  if (abs(Ng.y) > 0.99) uv = P.xz;
+  bool flatUp = abs(Ng.y) > 0.99;
+  vec3 T = flatUp ? vec3(1.0, 0.0, 0.0) : normalize(cross(vec3(0.0, 1.0, 0.0), Ng));
+  vec2 uv = flatUp ? P.xz : vec2(dot(P, T), P.y);
 
-  vec3 albedo = vec3(0.80, 0.78, 0.74);
+  vec3 albedo = vec3(0.80, 0.79, 0.76);
   float h = 0.0;
   float bump = 0.0;
-  float id = 0.5;
+  float wrap = 0.0;
+  vec2 id = vec2(0.5);
   vec3 lap = vec3(0.0);   // x: course coordinate, y: face tilt, z: edge width
   vec3 run = vec3(0.0);   // direction the courses stack in
 
   if (uKind == 1) {
-    h = stoneH(uv, id);
-    albedo = mix(vec3(0.62, 0.59, 0.54), vec3(0.84, 0.81, 0.75), id);
-    albedo *= 0.78 + 0.22 * smoothstep(0.0, 0.4, h);
-    bump = 0.045 * lod(uv.y / 0.26);
+    float m = stoneH(uv, 0.17, id);
+    vec3 tan_ = vec3(0.50, 0.41, 0.30), grey = vec3(0.40, 0.39, 0.37), pale = vec3(0.62, 0.57, 0.48), rust = vec3(0.42, 0.29, 0.20);
+    vec3 c = mix(tan_, grey, smoothstep(0.25, 0.6, id.x));
+    c = mix(c, pale, smoothstep(0.72, 0.9, id.y));
+    c = mix(c, rust, smoothstep(0.86, 0.98, id.x) * 0.8);
+    float grain = vnoise(uv * 34.0) * 0.6 + vnoise(uv * 90.0) * 0.4;
+    albedo = mix(vec3(0.34, 0.33, 0.31), c * (0.8 + 0.35 * grain), m);
+    h = m * (0.55 + 0.45 * id.y) + grain * 0.16 * m;
+    // Far away, individual stones resolve to their average tone.
+    float near = lod(uv.y / 0.17);
+    albedo = mix(vec3(0.43, 0.385, 0.32), albedo, near);
+    bump = 0.05 * near;
   } else if (uKind == 2) {
-    albedo = vec3(0.74, 0.73, 0.70);
-    lap = vec3(uv.y / 0.19, 0.14, 0.09);
+    albedo = vec3(0.150, 0.158, 0.170) * (0.92 + 0.16 * vnoise(vec2(uv.x * 0.7, floor(uv.y / 0.14) * 3.1)));
+    lap = vec3(uv.y / 0.14, 0.12, 0.10);
     run = vec3(0.0, 1.0, 0.0);
   } else if (uKind == 3) {
     uv.y = P.y / max(sqrt(1.0 - Ng.y * Ng.y), 0.25);
-    shingleH(uv, id);
-    albedo = vec3(0.30, 0.29, 0.28) * (0.85 + 0.3 * id);
-    lap = vec3(uv.y / 0.21, 0.10, 0.10);
+    float row = floor(uv.y / 0.16);
+    float tab = floor(uv.x / 0.30 + hash(vec2(row, 1.0)));
+    float tone = hash(vec2(tab, row));
+    albedo = vec3(0.060, 0.062, 0.068) * (0.75 + 0.6 * tone) * (0.9 + 0.2 * vnoise(uv * 40.0));
+    lap = vec3(uv.y / 0.16, 0.09, 0.12);
     run = normalize(vec3(0.0, 1.0, 0.0) - Ng * Ng.y);
   } else if (uKind == 4) {
-    h = vnoise(uv * 2.4) * 0.5 + vnoise(uv * 17.0) * 0.2;
-    albedo = vec3(0.085, 0.088, 0.096) * (0.9 + 0.2 * vnoise(uv * 0.9));
-    bump = 0.008;
+    float far = lod(uv.x * 14.0);
+    float blades = vnoise(uv * vec2(70.0, 55.0)) * 0.6 + vnoise(uv * 23.0) * 0.4;
+    float patchy = vnoise(uv * 0.55) * 0.6 + vnoise(uv * 2.3) * 0.4;
+    albedo = mix(vec3(0.020, 0.040, 0.014), vec3(0.046, 0.078, 0.026), patchy) * (0.75 + 0.5 * mix(0.5, blades, far));
+    h = blades;
+    bump = 0.012 * far;
+    wrap = 0.25;
   } else if (uKind == 5) {
-    albedo = vec3(0.015, 0.017, 0.022);
+    albedo = vec3(0.012, 0.014, 0.018);
   } else if (uKind == 6) {
-    albedo = mix(vec3(0.86, 0.84, 0.80), vec3(0.58, 0.30, 0.05), uBrass);
+    albedo = mix(vec3(0.80, 0.79, 0.76), vec3(0.58, 0.30, 0.05), uBrass);
   } else if (uKind == 7) {
-    albedo = vec3(0.10, 0.09, 0.085);
-    h = step(0.08, abs(fract(uv.x * 2.0) - 0.5)) * 0.5;
-    bump = 0.01;
+    albedo = vec3(0.030, 0.030, 0.032);
   } else if (uKind == 8) {
-    h = vnoise(P.xy * 9.0 + P.z * 6.0) + 0.5 * vnoise(P.zy * 19.0);
-    albedo = vec3(0.50, 0.51, 0.46) * (0.85 + 0.3 * vnoise(P.xy * 9.0 + P.z * 6.0));
-    bump = 0.008;
+    float leaf = vnoise(P.xy * 26.0 + P.z * 17.0) * 0.6 + vnoise(P.zy * 61.0 + P.x * 23.0) * 0.4;
+    albedo = mix(vec3(0.020, 0.045, 0.016), vec3(0.060, 0.105, 0.034), leaf);
+    h = leaf;
+    bump = 0.02 * lod(P.x * 12.0);
+    wrap = 0.45;
   } else if (uKind == 9) {
-    h = vnoise(uv * 5.0) * 0.5;
-    albedo = vec3(0.34, 0.33, 0.31);
-    bump = 0.01;
-  } else {
-    h = vnoise(uv * 13.0) * 0.5 + vnoise(uv * 41.0) * 0.2;
-    bump = 0.006;
+    float m = stoneH(uv * 0.42, 0.17, id);
+    albedo = mix(vec3(0.12, 0.115, 0.11), vec3(0.34, 0.33, 0.31) * (0.75 + 0.4 * id.x), m) * (0.9 + 0.2 * vnoise(uv * 30.0));
+    h = m;
+    bump = 0.018 * lod(uv.y / 0.4);
+  } else if (uKind == 10) {
+    albedo = vec3(0.115, 0.092, 0.075) * (0.8 + 0.4 * vnoise(vec2(uv.x * 40.0, uv.y * 6.0)));
+    wrap = 0.3;
+  } else if (uKind == 11) {
+    h = vnoise(uv * 38.0) * 0.6 + vnoise(uv * 90.0) * 0.4;
+    albedo = vec3(0.060, 0.038, 0.026) * (0.6 + 0.8 * h);
+    bump = 0.02 * lod(uv.x * 20.0);
   }
 
   // Bump from a height field using screen-space derivatives (Mikkelsen):
@@ -172,19 +201,29 @@ void main() {
     float keep = lod(lap.x);
     float edge = (1.0 - smoothstep(0.0, max(lap.z, fwidth(lap.x) * 2.5), f)) * keep;
     N = normalize(mix(normalize(Ng + run * lap.y), normalize(Ng * 0.45 - run), edge));
-    albedo *= 1.0 - 0.18 * edge;
+    albedo *= 1.0 - 0.25 * edge;
+  }
+
+  // Grounding: surfaces darken where they meet the house, and walls where
+  // they meet the ground. Cheap, and it is most of what makes a model sit.
+  float ao = 1.0;
+  float houseD = min(min(sdRect(P.xz, vec2(0.0, 0.0), vec2(4.0, 3.2)), sdRect(P.xz, vec2(1.9, 3.9), vec2(2.1, 0.7))), sdRect(P.xz, vec2(-6.1, -0.2), vec2(2.1, 2.3)));
+  if (uKind == 4 || uKind == 9 || uKind == 11) {
+    ao = 0.35 + 0.65 * smoothstep(0.0, 1.6, houseD);
+  } else if (!flatUp) {
+    ao = 0.6 + 0.4 * smoothstep(0.0, 0.45, P.y);
   }
 
   vec3 V = normalize(cameraPosition - P);
   vec3 col = vec3(0.0);
 
   // Sky: blue hour falling to near-black.
-  vec3 sky = mix(vec3(0.060, 0.085, 0.170), vec3(0.014, 0.020, 0.042), uNight);
-  col += albedo * sky * (0.30 + 0.70 * (0.5 + 0.5 * N.y));
+  vec3 sky = mix(vec3(0.075, 0.105, 0.210), vec3(0.016, 0.023, 0.048), uNight);
+  col += albedo * sky * (0.30 + 0.70 * (0.5 + 0.5 * N.y)) * ao;
   // Last warm light from the western horizon, gone by nightfall.
-  col += albedo * vec3(0.60, 0.30, 0.12) * (1.0 - uNight) * 0.22 * max(dot(N, normalize(vec3(-0.75, 0.12, 0.55))), 0.0);
+  col += albedo * vec3(0.60, 0.30, 0.12) * (1.0 - uNight) * 0.30 * max(dot(N, normalize(vec3(-0.75, 0.12, 0.55))), 0.0) * ao;
   // Moon as a cool rim only.
-  col += albedo * MOON * max(dot(N, uMoonDir), 0.0) * mix(0.05, 0.10, uNight);
+  col += albedo * MOON * max(dot(N, uMoonDir), 0.0) * mix(0.06, 0.13, uNight);
 
   float spec = 0.0;
   float gloss = uKind == 5 ? 1.0 : (uKind == 6 ? uBrass : 0.0);
@@ -198,30 +237,32 @@ void main() {
     float c = uLCos[i];
     float spot = smoothstep(c, mix(c, 1.0, 0.6), dot(-L, uLDir[i]));
     float att = 1.0 / (1.0 + 0.11 * d2);
-    col += albedo * LAMP * I * spot * att * pow(max(dot(N, L), 0.0), 0.8);
+    float nl = max((dot(N, L) + wrap) / (1.0 + wrap), 0.0);
+    col += albedo * LAMP * I * spot * att * pow(nl, 0.8);
     spec += I * spot * att * pow(max(dot(N, normalize(L + V)), 0.0), 60.0);
   }
 
-  // The visitor's light: a bare warm point, soft falloff, slight wrap so
-  // it grazes relief instead of cutting it off.
+  // The visitor's light: a bare warm point with soft falloff and real shadows.
   {
     vec3 L = uCur - P;
     float d2 = dot(L, L);
     L *= inversesqrt(d2);
-    float att = 1.0 / (1.0 + 0.75 * d2);
-    float nl = max((dot(N, L) + 0.12) / 1.12, 0.0);
-    col += albedo * LAMP * uCurInt * att * nl;
-    spec += uCurInt * att * pow(max(dot(N, normalize(L + V)), 0.0), 90.0);
+    float att = 1.0 / (1.0 + 0.5 * d2);
+    float nl = max((dot(N, L) + max(wrap, 0.1)) / (1.0 + max(wrap, 0.1)), 0.0);
+    float sh = curShadow(P, Ng);
+    col += albedo * LAMP * uCurInt * att * nl * sh;
+    spec += uCurInt * att * sh * pow(max(dot(N, normalize(L + V)), 0.0), 90.0);
   }
 
   // Holiday state: a low warm spill near the roofline from the string lights.
-  col += albedo * LAMP * uHoliday * 0.10 * smoothstep(1.8, 5.2, P.y);
+  col += albedo * LAMP * uHoliday * 0.16 * smoothstep(1.8, 5.2, P.y) * (1.0 - smoothstep(0.4, 2.0, houseD));
 
   if (uKind == 5) {
-    // Lived-in windows: a faint interior glow that rises with nightfall.
-    // Some rooms are lit, some are not.
-    float room = smoothstep(0.42, 0.58, vnoise(vec2(P.x * 0.55 + P.z * 0.9, P.y * 0.45) + 4.0));
-    col += LAMP * (0.012 + (0.02 + 0.16 * uNight) * room) * (0.7 + 0.3 * vnoise(uv * 2.3));
+    // Lived-in windows: some rooms lit behind sheer curtains, some dark.
+    float room = smoothstep(0.40, 0.56, vnoise(vec2(P.x * 0.55 + P.z * 0.9, P.y * 0.45) + 4.0));
+    float curtain = 0.75 + 0.25 * sin(uv.x * 42.0) * sin(uv.x * 13.0 + 1.0);
+    col += vec3(1.0, 0.56, 0.22) * (0.010 + (0.03 + 0.30 * uNight) * room * curtain);
+    col += mix(vec3(0.05, 0.08, 0.16), vec3(0.01, 0.014, 0.03), uNight) * pow(1.0 - max(dot(N, V), 0.0), 3.0);
     col += MOON * 0.05 * pow(max(dot(reflect(-V, N), uMoonDir), 0.0), 24.0);
   }
   col += LAMP * spec * gloss * 0.6;

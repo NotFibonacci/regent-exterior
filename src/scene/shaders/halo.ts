@@ -4,7 +4,7 @@
 export const haloVertex = /* glsl */ `
 attribute float aGroup;
 attribute float aSize;
-uniform float uG[5];
+uniform float uG[6];
 uniform float uPx;
 varying float vI;
 void main() {

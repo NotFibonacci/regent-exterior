@@ -6,7 +6,7 @@ import Lenis from 'lenis';
 export const state = {
   k: 0, // camera keyframe position, 0 .. KEYS.length - 1
   night: 0,
-  groups: [0, 0, 0, 0, 0], // path, uplight, wash, eave, holiday
+  groups: [0, 0, 0, 0, 0, 0], // path, uplight, wash, eave, holiday, entry lantern
   reduced: false,
 };
 
