@@ -17,40 +17,60 @@ type Fx = { at: [number, number]; dir?: [number, number]; deg?: number; reach: n
 const up: [number, number] = [0, -1];
 const down: [number, number] = [0, 1];
 
+// The scheme follows how a lighting designer would treat this house: light
+// the features, leave the rest dark. Corners and piers are grazed, never the
+// middle of a wall under a window; one specimen plant is picked out; the
+// entry is the warmest point; a tree behind the roof gives depth.
 const FIXTURES: Fx[] = [
-  // Path lights along the flagstone walk: round pools, flattened by perspective.
-  ...([[12, 89.5], [25, 87.5], [37, 85.5], [50, 86.8], [62, 88.8], [73, 90]] as [number, number][]).map((at) => ({ at, reach: 0.085, squash: 3.0, power: 1.25, group: G.path })),
-  // Uplights at the foot of the stone.
-  { at: [43.3, 79], dir: up, deg: 27, reach: 0.3, power: 5.1, group: G.uplight },
-  { at: [50.4, 80], dir: up, deg: 27, reach: 0.3, power: 5.1, group: G.uplight },
-  { at: [53.6, 82.5], dir: up, deg: 30, reach: 0.33, power: 5.7, group: G.uplight },
-  { at: [69, 85], dir: up, deg: 30, reach: 0.35, power: 5.7, group: G.uplight },
-  { at: [76.6, 86], dir: up, deg: 30, reach: 0.36, power: 5.7, group: G.uplight },
-  // Wall wash on the siding: wing, the gable above the stone, the side wall.
-  { at: [33.5, 78.5], dir: up, deg: 38, reach: 0.26, power: 3.9, group: G.wash },
-  { at: [40.5, 77.5], dir: up, deg: 38, reach: 0.26, power: 3.9, group: G.wash },
-  { at: [55.5, 52.6], dir: [0.1, -1], deg: 40, reach: 0.34, power: 3.45, group: G.wash },
-  { at: [70.5, 52.4], dir: [-0.12, -1], deg: 40, reach: 0.34, power: 3.45, group: G.wash },
-  { at: [83, 84], dir: [0.03, -1], deg: 32, reach: 0.5, power: 4.2, group: G.wash },
-  // Soffit downlights under the overhang and the wing eave.
-  { at: [57, 54.4], dir: down, deg: 46, reach: 0.2, power: 3.0, group: G.eave },
-  { at: [64.5, 54.4], dir: down, deg: 46, reach: 0.2, power: 3.0, group: G.eave },
-  { at: [72, 54.2], dir: down, deg: 46, reach: 0.2, power: 3.0, group: G.eave },
-  { at: [25, 58], dir: down, deg: 46, reach: 0.17, power: 2.7, group: G.eave },
-  { at: [31, 57.3], dir: down, deg: 46, reach: 0.17, power: 2.7, group: G.eave },
+  // Path: few, staggered either side of the walk, never a runway.
+  { at: [14, 90.5], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  { at: [28, 86.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  { at: [40, 87.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  { at: [57, 87.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  { at: [70, 91.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  // Stone: grazers at the two piers of the front gable and beside the door.
+  { at: [54.6, 82.6], dir: [0.02, -1], deg: 21, reach: 0.34, power: 4.6, group: G.uplight },
+  { at: [75.2, 86.2], dir: [-0.02, -1], deg: 21, reach: 0.37, power: 4.6, group: G.uplight },
+  { at: [43.5, 79.2], dir: up, deg: 15, reach: 0.38, power: 4.2, group: G.uplight },
+  // The clipped tree by the steps, lit as a specimen.
+  { at: [53.2, 77.5], dir: up, deg: 40, reach: 0.17, power: 3.0, group: G.uplight },
+  // The corner, so the house reads as a volume and not a flat front.
+  { at: [80.6, 87.4], dir: [0.04, -1], deg: 17, reach: 0.44, power: 3.4, group: G.uplight },
+  // Siding: one soft wash between the wing windows, the big shrub, and a
+  // downlight tucked under the gable peak.
+  { at: [26.2, 79.5], dir: up, deg: 44, reach: 0.25, power: 3.0, group: G.wash },
+  { at: [19, 80], dir: [0.1, -1], deg: 60, reach: 0.14, power: 1.6, group: G.wash },
+  { at: [61.0, 23.2], dir: down, deg: 36, reach: 0.33, power: 3.2, group: G.wash },
+  // Roofline: soffit light under the wing eave and over the door.
+  { at: [23.5, 58.2], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
+  { at: [29.5, 57.6], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
+  { at: [46.2, 57.0], dir: down, deg: 44, reach: 0.27, power: 2.8, group: G.eave },
   // The lantern by the door comes up with nightfall.
-  { at: [49.3, 61.2], reach: 0.075, power: 1.1, group: G.entry },
+  { at: [49.3, 61.2], reach: 0.07, power: 1.0, group: G.entry },
+];
+
+// Windows that glow from inside at night (centre x, y and half size, image %).
+const WINDOWS: [number, number, number, number][] = [
+  [61.1, 37.6, 2.5, 4.6],
+  [47.0, 44.6, 1.1, 3.6],
+  [23.8, 64.2, 1.1, 3.3],
+  [28.5, 64.4, 1.2, 3.8],
+];
+
+// Shrubs that take net lights in the holiday state (centre and radii, image %).
+const NETS: { c: [number, number]; r: [number, number]; n: number }[] = [
+  { c: [19.5, 74.5], r: [9.6, 6.6], n: 190 },
+  { c: [53.2, 66.8], r: [4.4, 6.2], n: 90 },
 ];
 
 // Rooflines that carry holiday string lights.
 const STRINGS: [number, number][][] = [
-  [[20.3, 57.2], [34.2, 55.6]],
-  [[34.5, 55.4], [43, 43.2]],
-  [[44.6, 38.2], [47.6, 33.6], [50.4, 37.4]],
-  [[50.6, 40.2], [61, 20.2], [74.6, 32.2]],
-  [[76.2, 30.6], [82.4, 15.2], [89.6, 46]],
-  [[51.4, 53.4], [74.4, 53]],
-  [[43.3, 55.6], [48.9, 55.3]],
+  [[20.4, 56.9], [34.0, 55.3]],
+  [[34.6, 55.0], [43.2, 43.0]],
+  [[44.7, 38.0], [47.6, 33.5], [50.3, 37.2]],
+  [[50.7, 39.9], [61.0, 20.1], [74.5, 32.0]],
+  [[76.3, 30.3], [82.4, 15.1], [89.4, 45.6]],
+  [[51.5, 53.2], [74.3, 52.8]],
 ];
 
 // View per scene section: centre of interest (image %) and zoom.
@@ -69,6 +89,8 @@ void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
 
 const fragment = /* glsl */ `
 #define N ${N}
+#define S 12
+#define W 4
 uniform sampler2D tDay;
 uniform sampler2D tSky;
 uniform sampler2D tDraw;
@@ -86,6 +108,9 @@ uniform vec3 uLA[N];  // cos of cone half-angle (-1 = all round), reach, vertica
 uniform float uLI[N];
 uniform vec2 uCur;
 uniform float uCurInt;
+uniform vec4 uSeg[S];
+uniform vec4 uWin[W];
+uniform float uWinI;
 varying vec2 vUv;
 
 const vec3 WARM = vec3(1.0, 0.60, 0.29);
@@ -95,6 +120,10 @@ const float A = ${IMG_ASPECT.toFixed(5)};
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 vec3 day(vec2 uv) { return texture2D(tDay, vec2(uv.x, 1.0 - uv.y)).rgb; }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float segDist(vec2 p, vec4 s) {
+  vec2 pa = p - s.xy, ba = s.zw - s.xy;
+  return length(pa - ba * clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0));
+}
 
 void main() {
   float yt = (1.0 - vUv.y) / uFrame.x;
@@ -135,10 +164,12 @@ void main() {
     // Gaussian across the beam: a scallop with no hard edge.
     float spot = c < -0.5 ? 1.0 : exp(-2.4 * pow(acos(clamp(dot(n, uLD[i]), -1.0, 1.0)) / acos(c), 2.0));
     float r = dist / uLA[i].y;
-    float att = pow(max(1.0 - r, 0.0), 1.6) / (0.35 + 2.5 * r);
+    // The beam opens a little above its source, so there is no hot dot
+    // at the fixture, then falls away up the wall.
+    float att = smoothstep(0.0, 0.07, r) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
     float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
     lit += I * spot * att * rake;
-    halo += I * exp(-dot(v0, v0) / 0.000006);
+    halo += I * exp(-dot(v0, v0) / 0.0000035);
   }
 
   // The visitor's light: a hand-held lamp close to the wall.
@@ -151,11 +182,24 @@ void main() {
     lit += uCurInt * att * rake;
   }
 
-  // Holiday state: a low warm spill over the house from the string lights.
-  lit += uHoliday * 0.12 * smoothstep(0.95, 0.35, cuv.y);
+  // Holiday state: each string throws a tight glow onto the fascia it hangs
+  // from and a wider, fainter one onto the wall and roof beside it.
+  if (uHoliday > 0.001) {
+    float dm = 1.0;
+    for (int i = 0; i < S; i++) dm = min(dm, segDist(p, uSeg[i]));
+    lit += uHoliday * (exp(-dm * dm / 0.00022) * 0.85 + exp(-dm * dm / 0.0045) * 0.2 + 0.03);
+  }
+
+  // Rooms lit from inside: the day pixels of the glass, warmed.
+  float win = 0.0;
+  for (int i = 0; i < W; i++) {
+    vec2 q = abs(cuv - uWin[i].xy) - uWin[i].zw;
+    win += 1.0 - smoothstep(-0.003, 0.002, max(q.x, q.y));
+  }
+  col += d * vec3(1.0, 0.56, 0.22) * win * uWinI;
 
   col += d * WARM * lit * solid * 1.15;
-  col += vec3(1.0, 0.66, 0.34) * halo * 0.7;
+  col += vec3(1.0, 0.66, 0.34) * halo * 0.35;
 
   // Soft shoulder so the hottest scallops roll off instead of clipping.
   col = 1.0 - exp(-col * 1.5);
@@ -182,6 +226,8 @@ void main() {
 
 const bulbVertex = /* glsl */ `
 attribute vec2 aUv;
+attribute vec2 aBulb;
+varying float vB;
 uniform vec2 uC;
 uniform float uZ;
 uniform vec2 uF;
@@ -192,17 +238,22 @@ void main() {
   vec2 q = (aUv - uC) * uZ / uF + 0.5;
   vec2 s = vec2(q.x + uFrame.y, q.y * uFrame.x);
   gl_Position = vec4(s.x * 2.0 - 1.0, 1.0 - s.y * 2.0, 0.0, 1.0);
-  gl_PointSize = uHoliday > 0.001 ? uPx * uZ : 0.0;
+  vB = aBulb.y;
+  gl_PointSize = uHoliday > 0.001 ? uPx * uZ * aBulb.x : 0.0;
 }
 `;
 
 const bulbFragment = /* glsl */ `
 uniform float uHoliday;
+varying float vB;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
-  float core = smoothstep(0.3, 0.0, r);
-  float glow = pow(max(1.0 - r, 0.0), 2.4);
-  gl_FragColor = vec4((vec3(1.0, 0.62, 0.3) * glow * 0.75 + vec3(1.0, 0.9, 0.74) * core) * uHoliday, 1.0);
+  // A small hot filament, a tight bloom, and a faint wide veil.
+  float core = smoothstep(0.17, 0.03, r);
+  float bloom = pow(max(1.0 - r, 0.0), 5.0) * 0.55;
+  float veil = pow(max(1.0 - r, 0.0), 2.0) * 0.07;
+  vec3 col = vec3(1.0, 0.86, 0.62) * core * 1.3 + vec3(1.0, 0.58, 0.24) * (bloom + veil);
+  gl_FragColor = vec4(col * uHoliday * vB, 1.0);
   #include <colorspace_fragment>
 }
 `;
@@ -265,6 +316,9 @@ export default function PhotoStage() {
       uLI: { value: new Array<number>(N).fill(0) },
       uCur: { value: new THREE.Vector2(0.8, 0.6) },
       uCurInt: { value: 0 },
+      uSeg: { value: [] as THREE.Vector4[] },
+      uWin: { value: WINDOWS.map((w) => new THREE.Vector4(w[0] / 100, w[1] / 100, w[2] / 100, w[3] / 100)) },
+      uWinI: { value: 0 },
     };
 
     const scene = new THREE.Scene();
@@ -273,17 +327,39 @@ export default function PhotoStage() {
     quad.frustumCulled = false;
     scene.add(quad);
 
+    // Strings: C9 bulbs at an even pitch, each a touch different in size and
+    // brightness and not quite on the line, as hand-clipped bulbs are.
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const pts: number[] = [];
+    const bulb: number[] = [];
+    const segs: THREE.Vector4[] = [];
     for (const line of STRINGS) {
       for (let i = 0; i < line.length - 1; i++) {
         const [ax, ay] = line[i];
         const [bx, by] = line[i + 1];
-        const n = Math.max(2, Math.round(Math.hypot((bx - ax) * IMG_ASPECT, by - ay) / 1.05));
-        for (let j = 0; j <= n; j++) pts.push((ax + ((bx - ax) * j) / n) / 100, (ay + ((by - ay) * j) / n) / 100);
+        segs.push(new THREE.Vector4((ax / 100) * IMG_ASPECT, ay / 100, (bx / 100) * IMG_ASPECT, by / 100));
+        const n = Math.max(2, Math.round(Math.hypot((bx - ax) * IMG_ASPECT, by - ay) / 1.15));
+        for (let j = 0; j <= n; j++) {
+          pts.push((ax + ((bx - ax) * j) / n + (rnd() - 0.5) * 0.12) / 100, (ay + ((by - ay) * j) / n + (rnd() - 0.5) * 0.14 + 0.25) / 100);
+          bulb.push(0.9 + rnd() * 0.25, 0.82 + rnd() * 0.3);
+        }
       }
     }
+    // Net lights: many small points scattered through a shrub.
+    for (const net of NETS) {
+      for (let i = 0; i < net.n; i++) {
+        const a = rnd() * Math.PI * 2;
+        const r = Math.sqrt(rnd()) * 0.94;
+        pts.push((net.c[0] + Math.cos(a) * r * net.r[0]) / 100, (net.c[1] + Math.sin(a) * r * net.r[1]) / 100);
+        bulb.push(0.36 + rnd() * 0.16, 0.5 + rnd() * 0.5);
+      }
+    }
+    while (segs.length < 12) segs.push(new THREE.Vector4(9, 9, 9, 9));
+    uniforms.uSeg.value = segs;
     const bulbGeo = new THREE.BufferGeometry();
     bulbGeo.setAttribute('aUv', new THREE.Float32BufferAttribute(pts, 2));
+    bulbGeo.setAttribute('aBulb', new THREE.Float32BufferAttribute(bulb, 2));
     bulbGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array((pts.length / 2) * 3), 3));
     const bulbUniforms = { ...view, uPx: { value: 10 }, uHoliday: uniforms.uHoliday };
     const bulbs = new THREE.Points(
@@ -307,7 +383,7 @@ export default function PhotoStage() {
       view.uF.value.set(af > IMG_ASPECT ? 1 : af / IMG_ASPECT, af > IMG_ASPECT ? IMG_ASPECT / af : 1);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
       renderer.setSize(layout.w, layout.h);
-      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.011 * renderer.getPixelRatio();
+      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.02 * renderer.getPixelRatio();
     };
     resize();
     const ro = new ResizeObserver(resize);
@@ -370,6 +446,7 @@ export default function PhotoStage() {
       uniforms.uCurInt.value = 0.55 + 0.75 * state.night;
 
       uniforms.uNight.value = state.night;
+      uniforms.uWinI.value = 0.05 + 0.5 * state.night;
       uniforms.uHoliday.value = state.groups[G.holiday];
       state.groups[G.entry] = 0.3 + 0.7 * state.night;
       FIXTURES.forEach((fxr, n) => (uniforms.uLI.value[n] = fxr.power * state.groups[fxr.group]));
