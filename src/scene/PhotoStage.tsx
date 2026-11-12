@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { startTimeline, state } from './timeline';
+import netBulbs from './nets.json';
 
 // The hero is a real photograph, relit in the browser. The daytime photo
 // holds all the surface detail; the shader grades it down to dusk and night,
@@ -57,14 +58,19 @@ const WINDOWS: [number, number, number, number][] = [
   [28.5, 64.4, 1.2, 3.8],
 ];
 
-// Planting dressed in the holiday state (centre and radii, image %).
-// pitch is the spacing of the net's diamond grid; glow lights the foliage.
-const NETS: { c: [number, number]; r: [number, number]; pitch: number; glow: number }[] = [
-  { c: [19.6, 74.4], r: [10.2, 6.9], pitch: 0.62, glow: 0.6 }, // the big shrub
-  { c: [13.4, 68.3], r: [4.3, 2.1], pitch: 0.62, glow: 0.45 }, // hedge behind it
-  { c: [53.2, 66.8], r: [4.5, 6.3], pitch: 0.58, glow: 0.6 }, // clipped tree by the steps
-  { c: [67.0, 84.4], r: [11.0, 1.5], pitch: 0.95, glow: 0.3 }, // low planting under the stone
-];
+// Shrub net lights are generated from the photo: bulbs sit only on real
+// foliage (nets.json: x, y, size, brightness) and fx.png holds the glow they
+// throw on the leaves (red) and where snow settles (green).
+
+// Colour options for the holiday state. Bulbs cycle through the list.
+const PALETTES: Record<string, [number, number, number][]> = {
+  warm: [[1.0, 0.8, 0.52]],
+  cool: [[0.78, 0.9, 1.0]],
+  multi: [[1.0, 0.1, 0.07], [0.12, 0.85, 0.2], [0.15, 0.35, 1.0], [1.0, 0.55, 0.06]],
+  redgreen: [[1.0, 0.1, 0.07], [0.12, 0.85, 0.2]],
+  bluewhite: [[0.15, 0.38, 1.0], [0.82, 0.92, 1.0]],
+};
+
 // Stem of the clipped tree, wrapped; and a lit wreath on the door.
 const TRUNK: [[number, number], [number, number]] = [[53.3, 73.4], [53.6, 80.6]];
 const WREATH = { c: [46.75, 62.9] as [number, number], r: [0.95, 1.5] as [number, number] };
@@ -118,8 +124,9 @@ uniform vec2 uCur;
 uniform float uCurInt;
 uniform vec4 uSeg[S];
 uniform vec4 uWin[W];
-uniform vec4 uNet[4];
-uniform float uNetGlow[4];
+uniform sampler2D tFx;
+uniform float uSnow;
+uniform vec3 uHolTint;
 uniform float uWinI;
 varying vec2 vUv;
 
@@ -142,6 +149,11 @@ void main() {
 
   vec3 d = day(cuv);
   float L0 = luma(d);
+  vec2 fx = texture2D(tFx, vec2(cuv.x, 1.0 - cuv.y)).rg;
+  // Settled snow: replaces the surface colour but keeps its shading, so
+  // shingle lines and footprints of shadow still read through it.
+  d = mix(d, vec3(0.80, 0.84, 0.90) * (0.60 + 0.62 * L0), fx.g * uSnow);
+  L0 = luma(d);
   float sky = texture2D(tSky, vec2(cuv.x, 1.0 - cuv.y)).r;
 
   // Surface relief, read from the photo itself: the brightness gradient
@@ -162,6 +174,7 @@ void main() {
   vec2 p = vec2(cuv.x * A, cuv.y);
   float solid = 1.0 - sky;
   float lit = 0.0;
+  float litH = 0.0;
   float halo = 0.0;
   for (int i = 0; i < N; i++) {
     float I = uLI[i];
@@ -176,7 +189,7 @@ void main() {
     float r = dist / uLA[i].y;
     // The beam opens a little above its source, so there is no hot dot
     // at the fixture, then falls away up the wall.
-    float att = smoothstep(0.0, 0.07, r) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
+    float att = (c < -0.5 ? 1.0 : smoothstep(0.0, 0.07, r)) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
     float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
     lit += I * spot * att * rake;
     vec2 vh = p - uLH[i];
@@ -198,12 +211,9 @@ void main() {
   if (uHoliday > 0.001) {
     float dm = 1.0;
     for (int i = 0; i < S; i++) dm = min(dm, segDist(p, uSeg[i]));
-    lit += uHoliday * (exp(-dm * dm / 0.00012) * 1.1 + exp(-dm * dm / 0.0030) * 0.22 + 0.03);
-    // Net-lit planting: the leaves themselves take the light.
-    for (int i = 0; i < 4; i++) {
-      vec2 q = (cuv - uNet[i].xy) / uNet[i].zw;
-      lit += uHoliday * uNetGlow[i] * smoothstep(0.0, 0.7, 1.0 - dot(q, q));
-    }
+    litH += uHoliday * (exp(-dm * dm / 0.00012) * 1.1 + exp(-dm * dm / 0.0030) * 0.22 + 0.03);
+    // Net-lit planting: each bulb lights the leaves around it.
+    litH += uHoliday * fx.r * 1.5;
   }
 
   // Rooms lit from inside: the day pixels of the glass, warmed.
@@ -214,7 +224,7 @@ void main() {
   }
   col += d * vec3(1.0, 0.56, 0.22) * win * uWinI;
 
-  col += d * WARM * lit * solid * 1.15;
+  col += d * (WARM * lit + uHolTint * litH) * solid * 1.15;
   col += vec3(1.0, 0.70, 0.38) * halo * 0.5;
 
   // Soft shoulder so the hottest scallops roll off instead of clipping.
@@ -243,7 +253,11 @@ void main() {
 const bulbVertex = /* glsl */ `
 attribute vec2 aUv;
 attribute vec2 aBulb;
+attribute float aIdx;
+uniform vec3 uPal[4];
+uniform float uPalN;
 varying float vB;
+varying vec3 vCol;
 uniform vec2 uC;
 uniform float uZ;
 uniform vec2 uF;
@@ -255,6 +269,7 @@ void main() {
   vec2 s = vec2(q.x + uFrame.y, q.y * uFrame.x);
   gl_Position = vec4(s.x * 2.0 - 1.0, 1.0 - s.y * 2.0, 0.0, 1.0);
   vB = aBulb.y;
+  vCol = uPal[int(mod(aIdx, uPalN))];
   gl_PointSize = uHoliday > 0.001 ? uPx * uZ * aBulb.x : 0.0;
 }
 `;
@@ -262,14 +277,42 @@ void main() {
 const bulbFragment = /* glsl */ `
 uniform float uHoliday;
 varying float vB;
+varying vec3 vCol;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   // A crisp bulb with a tight bloom. The glow on the house itself is done
   // in the photo shader, where it lands on real surfaces.
   float core = smoothstep(0.26, 0.12, r);
   float bloom = pow(max(1.0 - r, 0.0), 4.0) * 0.38;
-  vec3 col = vec3(1.0, 0.83, 0.56) * core * 1.5 + vec3(1.0, 0.55, 0.22) * bloom;
+  vec3 col = mix(vCol, vec3(1.0), 0.3) * core * 1.5 + vCol * bloom * 0.9;
   gl_FragColor = vec4(col * uHoliday * vB, 1.0);
+  #include <colorspace_fragment>
+}
+`;
+
+// Falling snow, in screen space. Kept off the copy column.
+const flakeVertex = /* glsl */ `
+attribute vec3 aSeed;
+uniform float uTime;
+uniform float uSnow;
+uniform float uWide;
+uniform float uDpr;
+varying float vA;
+void main() {
+  float depth = aSeed.z;
+  float x = fract(aSeed.x + sin(uTime * 0.3 + aSeed.y * 40.0) * 0.012 + uTime * 0.004);
+  float y = fract(aSeed.y + uTime * mix(0.03, 0.085, depth));
+  float keep = uWide > 0.5 ? smoothstep(0.24, 0.44, x) : 1.0 - smoothstep(0.5, 0.66, y);
+  vA = mix(0.18, 0.6, depth) * uSnow * keep;
+  gl_Position = vec4(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
+  gl_PointSize = mix(1.4, 4.2, depth * depth) * uDpr;
+}
+`;
+const flakeFragment = /* glsl */ `
+varying float vA;
+void main() {
+  float r = length(gl_PointCoord - 0.5) * 2.0;
+  gl_FragColor = vec4(vec3(0.80, 0.86, 1.0) * smoothstep(1.0, 0.2, r) * vA, 1.0);
   #include <colorspace_fragment>
 }
 `;
@@ -338,8 +381,9 @@ export default function PhotoStage() {
       uSeg: { value: [] as THREE.Vector4[] },
       uWin: { value: WINDOWS.map((w) => new THREE.Vector4(w[0] / 100, w[1] / 100, w[2] / 100, w[3] / 100)) },
       uWinI: { value: 0 },
-      uNet: { value: NETS.map((n) => new THREE.Vector4(n.c[0] / 100, n.c[1] / 100, n.r[0] / 100, n.r[1] / 100)) },
-      uNetGlow: { value: NETS.map((n) => n.glow) },
+      tFx: { value: null as THREE.Texture | null },
+      uSnow: { value: 0 },
+      uHolTint: { value: new THREE.Vector3(1.0, 0.6, 0.29) },
     };
 
     const scene = new THREE.Scene();
@@ -368,42 +412,27 @@ export default function PhotoStage() {
         }
       }
     }
-    // Net lights: a diamond grid draped over each form. The grid is pushed
-    // outward toward the rim, as a net wraps a rounded shrub, and bulbs dim
-    // where the surface turns away. A few are dark, as on any real net.
-    for (const net of NETS) {
-      const rows = Math.ceil((net.r[1] * 2) / (net.pitch * 0.86));
-      const cols = Math.ceil((net.r[0] * 2) / (net.pitch * IMG_ASPECT * 0.75));
-      for (let j = 0; j <= rows; j++) {
-        for (let i = 0; i <= cols; i++) {
-          const u = ((i + (j % 2) * 0.5) / cols) * 2 - 1;
-          const v = (j / rows) * 2 - 1;
-          const d = Math.hypot(u, v);
-          // The rim follows the plant, not a perfect oval.
-          const ang = Math.atan2(v, u);
-          const rim = 0.93 + 0.07 * Math.sin(ang * 3 + net.c[0]) * Math.sin(ang * 5 + net.c[1]);
-          if (d > rim || rnd() < 0.06 || (d > rim - 0.1 && rnd() < 0.3)) continue;
-          const wrap = d > 0 ? Math.sin((d * Math.PI) / 2) / d : 1;
-          const x = net.c[0] + u * wrap * net.r[0] * 0.97 + (rnd() - 0.5) * net.pitch * 0.22;
-          const y = net.c[1] + v * wrap * net.r[1] * 0.97 + (rnd() - 0.5) * net.pitch * 0.22;
-          pts.push(x / 100, y / 100);
-          const facing = Math.sqrt(Math.max(1 - d * d, 0));
-          bulb.push(0.5 + rnd() * 0.14, (0.35 + 0.65 * facing) * (0.8 + rnd() * 0.3));
-        }
-      }
+    const idx: number[] = pts.length ? Array.from({ length: pts.length / 2 }, (_, k) => k) : [];
+    // Net lights on the real foliage. Each net is one colour run.
+    for (const [x, y, size, b] of netBulbs as number[][]) {
+      pts.push(x, y);
+      bulb.push(size, b);
+      idx.push(Math.floor(rnd() * 4));
     }
     // Trunk wrap: tight turns up the stem.
     for (let k = 0; k <= 16; k++) {
       const t = k / 16;
       pts.push((TRUNK[0][0] + (TRUNK[1][0] - TRUNK[0][0]) * t + (k % 2 ? 0.28 : -0.28)) / 100, (TRUNK[0][1] + (TRUNK[1][1] - TRUNK[0][1]) * t) / 100);
-      bulb.push(0.5, 0.85);
+      bulb.push(0.42, 0.8);
+      idx.push(k);
     }
     // Wreath: two rings of small lights.
     for (const [scale, n] of [[1, 18], [0.72, 12]] as const) {
       for (let k = 0; k < n; k++) {
         const a = (k / n) * Math.PI * 2 + scale;
         pts.push((WREATH.c[0] + Math.cos(a) * WREATH.r[0] * scale) / 100, (WREATH.c[1] + Math.sin(a) * WREATH.r[1] * scale) / 100);
-        bulb.push(0.42, 0.9);
+        bulb.push(0.4, 0.9);
+        idx.push(k);
       }
     }
     while (segs.length < 12) segs.push(new THREE.Vector4(9, 9, 9, 9));
@@ -411,14 +440,48 @@ export default function PhotoStage() {
     const bulbGeo = new THREE.BufferGeometry();
     bulbGeo.setAttribute('aUv', new THREE.Float32BufferAttribute(pts, 2));
     bulbGeo.setAttribute('aBulb', new THREE.Float32BufferAttribute(bulb, 2));
+    bulbGeo.setAttribute('aIdx', new THREE.Float32BufferAttribute(idx, 1));
     bulbGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array((pts.length / 2) * 3), 3));
-    const bulbUniforms = { ...view, uPx: { value: 10 }, uHoliday: uniforms.uHoliday };
+    const pal = Array.from({ length: 4 }, () => new THREE.Vector3(1, 0.8, 0.52));
+    const bulbUniforms = { ...view, uPx: { value: 10 }, uHoliday: uniforms.uHoliday, uPal: { value: pal }, uPalN: { value: 1 } };
     const bulbs = new THREE.Points(
       bulbGeo,
       new THREE.ShaderMaterial({ vertexShader: bulbVertex, fragmentShader: bulbFragment, uniforms: bulbUniforms, transparent: true, blending: THREE.AdditiveBlending, depthTest: false }),
     );
     bulbs.frustumCulled = false;
     scene.add(bulbs);
+
+    const flakeCount = state.reduced ? 0 : coarse ? 260 : 520;
+    const seeds = new Float32Array(flakeCount * 3).map(() => Math.random());
+    const flakeGeo = new THREE.BufferGeometry();
+    flakeGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seeds, 3));
+    flakeGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(flakeCount * 3), 3));
+    const flakeUniforms = { uTime: { value: 0 }, uSnow: uniforms.uSnow, uWide: { value: 1 }, uDpr: { value: 1 } };
+    const flakes = new THREE.Points(
+      flakeGeo,
+      new THREE.ShaderMaterial({ vertexShader: flakeVertex, fragmentShader: flakeFragment, uniforms: flakeUniforms, transparent: true, blending: THREE.AdditiveBlending, depthTest: false }),
+    );
+    flakes.frustumCulled = false;
+    scene.add(flakes);
+
+    // Choices made in the holiday section: light colour and snow.
+    const choice = { snow: true };
+    const applyPalette = (name: string) => {
+      const list = PALETTES[name] ?? PALETTES.warm;
+      list.forEach((c, k) => pal[k].set(c[0], c[1], c[2]));
+      bulbUniforms.uPalN.value = list.length;
+      // Light thrown on the house takes the average colour of the bulbs.
+      const avg = list.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map((v) => v / list.length);
+      const m = Math.max(...avg);
+      if (name === 'warm') uniforms.uHolTint.value.set(1.0, 0.6, 0.29);
+      else uniforms.uHolTint.value.set((avg[0] / m) * 0.8 + 0.2, (avg[1] / m) * 0.8 + 0.2, (avg[2] / m) * 0.8 + 0.2);
+    };
+    const onChoice = (ev: Event) => {
+      const d = (ev as CustomEvent).detail ?? {};
+      if (typeof d.palette === 'string') applyPalette(d.palette);
+      if (typeof d.snow === 'boolean') choice.snow = d.snow;
+    };
+    window.addEventListener('regent:holiday', onChoice);
 
     // Layout: wide screens keep the photo full height and slide it right to
     // clear the copy; tall screens give it the upper part and fade the rest.
@@ -500,18 +563,25 @@ export default function PhotoStage() {
       // Rooms come on with the roofline section, not before.
       uniforms.uWinI.value = 0.5 * Math.min(1, state.groups[G.eave]);
       uniforms.uHoliday.value = state.groups[G.holiday];
+      // Snow settles over a few seconds once the December section arrives.
+      const snowTarget = choice.snow ? Math.min(1, state.groups[G.holiday]) : 0;
+      uniforms.uSnow.value += (snowTarget - uniforms.uSnow.value) * (state.reduced ? 1 : 1 - Math.exp(-dt * 0.9));
+      flakeUniforms.uTime.value = now / 1000;
+      flakeUniforms.uWide.value = layout.wide ? 1 : 0;
+      flakeUniforms.uDpr.value = renderer.getPixelRatio();
       state.groups[G.entry] = 0.3 + 0.7 * state.night;
       FIXTURES.forEach((fxr, n) => (uniforms.uLI.value[n] = fxr.power * state.groups[fxr.group]));
 
       renderer.render(scene, camera);
     };
 
-    Promise.all([load(big ? 'day-2400.webp' : 'day-1400.webp', true), load('sky.png', false), load('drawing.webp', false)])
-      .then(([dayT, skyT, drawT]) => {
+    Promise.all([load(big ? 'day-2400.webp' : 'day-1400.webp', true), load('sky.png', false), load('drawing.webp', false), load('fx.png', false)])
+      .then(([dayT, skyT, drawT, fxT]) => {
         if (!alive) return;
         uniforms.tDay.value = dayT;
         uniforms.tSky.value = skyT;
         uniforms.tDraw.value = drawT;
+        uniforms.tFx.value = fxT;
         const img = dayT.image as HTMLImageElement;
         uniforms.uTexel.value.set(1 / img.width, 1 / img.height);
         raf = requestAnimationFrame(frame);
@@ -531,6 +601,7 @@ export default function PhotoStage() {
       ro.disconnect();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', move);
+      window.removeEventListener('regent:holiday', onChoice);
       gsap.killTweensOf(uniforms.uIntro);
       stop();
       renderer.dispose();

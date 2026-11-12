@@ -49,7 +49,17 @@ import { site } from '../config/site';
         <p class="label" style="--i:0">Four · The season</p>
         <h2 style="--i:1">And for <em>December.</em></h2>
         <p class="body" style="--i:2">Roofline and gable lighting, installed, maintained through the season and taken down after it. From ${site.holidayMinimum}.</p>
-        <p style="--i:3"><a class="btn" href={`mailto:${site.email}?subject=Holiday%20lighting`}>Ask about holiday lighting</a></p>
+        <div class="options" style="--i:3">
+          <div class="swatches" role="group" aria-label="Light colour">
+            <button type="button" data-palette="warm" aria-pressed="true"><span style="background:#ffcf8a"></span>Warm white</button>
+            <button type="button" data-palette="cool" aria-pressed="false"><span style="background:#d6ebff"></span>Cool white</button>
+            <button type="button" data-palette="multi" aria-pressed="false"><span style="background:conic-gradient(#ff3b2e 0 25%,#2fd84a 0 50%,#2f6bff 0 75%,#ff9a1f 0)"></span>Multicolour</button>
+            <button type="button" data-palette="redgreen" aria-pressed="false"><span style="background:linear-gradient(90deg,#ff3b2e 50%,#2fd84a 50%)"></span>Red and green</button>
+            <button type="button" data-palette="bluewhite" aria-pressed="false"><span style="background:linear-gradient(90deg,#2f6bff 50%,#d6ebff 50%)"></span>Blue and white</button>
+          </div>
+          <button type="button" class="snow-toggle" data-snow aria-pressed="true">Snow</button>
+        </div>
+        <p style="--i:4"><a class="btn" href={`mailto:${site.email}?subject=Holiday%20lighting`}>Ask about holiday lighting</a></p>
       </div>
     </section>
   </main>
@@ -69,4 +79,23 @@ import { site } from '../config/site';
       </div>
     </div>
   </footer>
+
+  <script is:inline>
+    (function () {
+      var send = function (detail) { window.dispatchEvent(new CustomEvent('regent:holiday', { detail: detail })); };
+      var swatches = document.querySelectorAll('[data-palette]');
+      swatches.forEach(function (b) {
+        b.addEventListener('click', function () {
+          swatches.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
+          send({ palette: b.dataset.palette });
+        });
+      });
+      var snow = document.querySelector('[data-snow]');
+      if (snow) snow.addEventListener('click', function () {
+        var on = snow.getAttribute('aria-pressed') !== 'true';
+        snow.setAttribute('aria-pressed', String(on));
+        send({ snow: on });
+      });
+    })();
+  </script>
 </Base>
