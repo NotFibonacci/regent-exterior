@@ -64,13 +64,15 @@ const NETS: { c: [number, number]; r: [number, number]; n: number }[] = [
 ];
 
 // Rooflines that carry holiday string lights.
+// Traced on the photo along the outer roof edge, so every run is dead
+// straight on the real line of the house.
 const STRINGS: [number, number][][] = [
-  [[20.4, 56.9], [34.0, 55.3]],
-  [[34.6, 55.0], [43.2, 43.0]],
-  [[44.7, 38.0], [47.6, 33.5], [50.3, 37.2]],
-  [[50.7, 39.9], [61.0, 20.1], [74.5, 32.0]],
-  [[76.3, 30.3], [82.4, 15.1], [89.4, 45.6]],
-  [[51.5, 53.2], [74.3, 52.8]],
+  [[19.7, 56.9], [33.1, 55.1]],
+  [[33.9, 54.6], [42.7, 43.0]],
+  [[44.8, 38.1], [47.5, 33.2], [50.3, 36.3]],
+  [[50.6, 39.6], [61.0, 19.6], [74.3, 32.3]],
+  [[75.4, 31.7], [82.4, 14.6], [89.4, 48.3]],
+  [[51.0, 54.6], [74.4, 52.3]],
 ];
 
 // View per scene section: centre of interest (image %) and zoom.
@@ -187,7 +189,7 @@ void main() {
   if (uHoliday > 0.001) {
     float dm = 1.0;
     for (int i = 0; i < S; i++) dm = min(dm, segDist(p, uSeg[i]));
-    lit += uHoliday * (exp(-dm * dm / 0.00022) * 0.85 + exp(-dm * dm / 0.0045) * 0.2 + 0.03);
+    lit += uHoliday * (exp(-dm * dm / 0.00012) * 1.1 + exp(-dm * dm / 0.0030) * 0.22 + 0.03);
   }
 
   // Rooms lit from inside: the day pixels of the glass, warmed.
@@ -248,11 +250,11 @@ uniform float uHoliday;
 varying float vB;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
-  // A small hot filament, a tight bloom, and a faint wide veil.
-  float core = smoothstep(0.17, 0.03, r);
-  float bloom = pow(max(1.0 - r, 0.0), 5.0) * 0.55;
-  float veil = pow(max(1.0 - r, 0.0), 2.0) * 0.07;
-  vec3 col = vec3(1.0, 0.86, 0.62) * core * 1.3 + vec3(1.0, 0.58, 0.24) * (bloom + veil);
+  // A crisp bulb with a tight bloom. The glow on the house itself is done
+  // in the photo shader, where it lands on real surfaces.
+  float core = smoothstep(0.26, 0.12, r);
+  float bloom = pow(max(1.0 - r, 0.0), 4.0) * 0.38;
+  vec3 col = vec3(1.0, 0.83, 0.56) * core * 1.5 + vec3(1.0, 0.55, 0.22) * bloom;
   gl_FragColor = vec4(col * uHoliday * vB, 1.0);
   #include <colorspace_fragment>
 }
@@ -327,8 +329,8 @@ export default function PhotoStage() {
     quad.frustumCulled = false;
     scene.add(quad);
 
-    // Strings: C9 bulbs at an even pitch, each a touch different in size and
-    // brightness and not quite on the line, as hand-clipped bulbs are.
+    // Strings: C9 bulbs clipped at an exact, even pitch along each run, as a
+    // professional install is. No wobble; only a hair of variation in output.
     let seed = 11;
     const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
     const pts: number[] = [];
@@ -339,10 +341,11 @@ export default function PhotoStage() {
         const [ax, ay] = line[i];
         const [bx, by] = line[i + 1];
         segs.push(new THREE.Vector4((ax / 100) * IMG_ASPECT, ay / 100, (bx / 100) * IMG_ASPECT, by / 100));
-        const n = Math.max(2, Math.round(Math.hypot((bx - ax) * IMG_ASPECT, by - ay) / 1.15));
-        for (let j = 0; j <= n; j++) {
-          pts.push((ax + ((bx - ax) * j) / n + (rnd() - 0.5) * 0.12) / 100, (ay + ((by - ay) * j) / n + (rnd() - 0.5) * 0.14 + 0.25) / 100);
-          bulb.push(0.9 + rnd() * 0.25, 0.82 + rnd() * 0.3);
+        const n = Math.max(2, Math.round(Math.hypot((bx - ax) * IMG_ASPECT, by - ay) / 1.05));
+        // Skip the first bulb of a continuing run so corners are not doubled.
+        for (let j = i === 0 ? 0 : 1; j <= n; j++) {
+          pts.push((ax + ((bx - ax) * j) / n) / 100, (ay + ((by - ay) * j) / n) / 100);
+          bulb.push(1.0, 0.94 + rnd() * 0.1);
         }
       }
     }
@@ -352,7 +355,7 @@ export default function PhotoStage() {
         const a = rnd() * Math.PI * 2;
         const r = Math.sqrt(rnd()) * 0.94;
         pts.push((net.c[0] + Math.cos(a) * r * net.r[0]) / 100, (net.c[1] + Math.sin(a) * r * net.r[1]) / 100);
-        bulb.push(0.36 + rnd() * 0.16, 0.5 + rnd() * 0.5);
+        bulb.push(0.5 + rnd() * 0.2, 0.45 + rnd() * 0.45);
       }
     }
     while (segs.length < 12) segs.push(new THREE.Vector4(9, 9, 9, 9));
@@ -383,7 +386,7 @@ export default function PhotoStage() {
       view.uF.value.set(af > IMG_ASPECT ? 1 : af / IMG_ASPECT, af > IMG_ASPECT ? IMG_ASPECT / af : 1);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
       renderer.setSize(layout.w, layout.h);
-      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.02 * renderer.getPixelRatio();
+      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.0125 * renderer.getPixelRatio();
     };
     resize();
     const ro = new ResizeObserver(resize);
