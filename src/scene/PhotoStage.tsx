@@ -65,10 +65,10 @@ const WINDOWS: [number, number, number, number][] = [
 // Colour options for the holiday state. Bulbs cycle through the list.
 const PALETTES: Record<string, [number, number, number][]> = {
   warm: [[1.0, 0.8, 0.52]],
-  cool: [[0.78, 0.9, 1.0]],
-  multi: [[1.0, 0.1, 0.07], [0.12, 0.85, 0.2], [0.15, 0.35, 1.0], [1.0, 0.55, 0.06]],
-  redgreen: [[1.0, 0.1, 0.07], [0.12, 0.85, 0.2]],
-  bluewhite: [[0.15, 0.38, 1.0], [0.82, 0.92, 1.0]],
+  cool: [[0.72, 0.88, 1.0]],
+  multi: [[1.0, 0.02, 0.02], [0.02, 0.95, 0.06], [0.04, 0.2, 1.0], [1.0, 0.6, 0.0]],
+  redgreen: [[1.0, 0.02, 0.02], [0.02, 0.95, 0.06]],
+  bluewhite: [[0.04, 0.2, 1.0], [0.85, 0.93, 1.0]],
 };
 
 // Stem of the clipped tree, wrapped; and a lit wreath on the door.
@@ -127,10 +127,13 @@ uniform vec4 uWin[W];
 uniform sampler2D tFx;
 uniform float uSnow;
 uniform vec3 uHolTint;
+uniform vec2 uSegI[S]; // bulbs on the run, index of its first bulb
+uniform vec3 uPal[4];
+uniform float uPalN;
 uniform float uWinI;
 varying vec2 vUv;
 
-const vec3 WARM = vec3(1.0, 0.60, 0.29);
+const vec3 WARM = vec3(1.0, 0.55, 0.23);
 const vec3 INK = vec3(0.0024, 0.0027, 0.0034);
 const float A = ${IMG_ASPECT.toFixed(5)};
 
@@ -165,16 +168,24 @@ void main() {
   // Dusk and night grades of the same pixels.
   vec3 cool = mix(vec3(L0), d, 0.5);
   vec3 groundDusk = mix(vec3(L0), d, 0.85) * vec3(0.50, 0.55, 0.74) * 0.60;
-  vec3 groundNight = cool * vec3(0.26, 0.36, 0.66) * 0.085;
+  // Night is properly dark and cool, so that what is lit carries the picture.
+  vec3 groundNight = pow(cool, vec3(1.2)) * vec3(0.20, 0.32, 0.70) * 0.062;
   vec3 skyDusk = d * vec3(0.34, 0.37, 0.62) * 0.8 + vec3(0.42, 0.17, 0.05) * smoothstep(0.2, 0.62, cuv.y) * 0.5;
-  vec3 skyNight = pow(L0, 1.7) * vec3(0.030, 0.050, 0.125) * 1.5 + vec3(0.002, 0.003, 0.008);
+  vec3 skyNight = pow(L0, 2.0) * vec3(0.022, 0.042, 0.125) * 1.5 + vec3(0.0015, 0.0025, 0.008);
+  // A moon behind thin cloud, and a few stars in the clear patches.
+  vec2 mv = (cuv - vec2(0.30, 0.13)) * vec2(A, 1.0);
+  float md = dot(mv, mv);
+  skyNight += vec3(0.72, 0.80, 1.0) * (smoothstep(0.000150, 0.000115, md) * 1.1 + exp(-md / 0.0035) * 0.09 + exp(-md / 0.05) * 0.03);
+  vec2 sg = cuv * vec2(A, 1.0) * 170.0;
+  skyNight += vec3(0.8, 0.86, 1.0) * step(0.9965, hash(floor(sg))) * smoothstep(0.2, 0.03, length(fract(sg) - 0.5)) * (1.0 - smoothstep(0.25, 0.6, L0)) * 0.5;
   vec3 col = mix(mix(groundDusk, groundNight, uNight), mix(skyDusk, skyNight, uNight), sky);
 
   // Fixtures.
   vec2 p = vec2(cuv.x * A, cuv.y);
   float solid = 1.0 - sky;
   float lit = 0.0;
-  float litH = 0.0;
+  vec3 litH = vec3(0.0);
+  float air = 0.0;
   float halo = 0.0;
   for (int i = 0; i < N; i++) {
     float I = uLI[i];
@@ -192,6 +203,7 @@ void main() {
     float att = (c < -0.5 ? 1.0 : smoothstep(0.0, 0.07, r)) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
     float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
     lit += I * spot * att * rake;
+    air += (c < -0.5 ? 0.25 : 1.0) * I * spot * exp(-dot(v0, v0) / 0.006);
     vec2 vh = p - uLH[i];
     halo += I * exp(-dot(vh, vh) / 0.0000042);
   }
@@ -209,11 +221,22 @@ void main() {
   // Holiday state: each string throws a tight glow onto the fascia it hangs
   // from and a wider, fainter one onto the wall and roof beside it.
   if (uHoliday > 0.001) {
+    // Nearest run, and which bulb on it is closest: the fascia takes that
+    // bulb's own colour, so a multicolour string reads as separate colours.
     float dm = 1.0;
-    for (int i = 0; i < S; i++) dm = min(dm, segDist(p, uSeg[i]));
-    litH += uHoliday * (exp(-dm * dm / 0.00012) * 1.1 + exp(-dm * dm / 0.0030) * 0.22 + 0.03);
+    vec3 hc = uHolTint;
+    for (int i = 0; i < S; i++) {
+      vec2 pa = p - uSeg[i].xy, ba = uSeg[i].zw - uSeg[i].xy;
+      float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+      float dd = length(pa - ba * h);
+      if (dd < dm) {
+        dm = dd;
+        hc = uPal[int(mod(floor(h * uSegI[i].x + 0.5) + uSegI[i].y, uPalN))];
+      }
+    }
+    litH += uHoliday * (hc * exp(-dm * dm / 0.00006) * 0.85 + uHolTint * (exp(-dm * dm / 0.0030) * 0.24 + 0.03));
     // Net-lit planting: each bulb lights the leaves around it.
-    litH += uHoliday * fx.r * 1.5;
+    litH += uHoliday * uHolTint * fx.r * 1.7;
   }
 
   // Rooms lit from inside: the day pixels of the glass, warmed.
@@ -222,13 +245,19 @@ void main() {
     vec2 q = abs(cuv - uWin[i].xy) - uWin[i].zw;
     win += 1.0 - smoothstep(-0.003, 0.002, max(q.x, q.y));
   }
-  col += d * vec3(1.0, 0.56, 0.22) * win * uWinI;
+  col += d * vec3(1.0, 0.52, 0.18) * win * uWinI * 1.3;
 
-  col += d * (WARM * lit + uHolTint * litH) * solid * 1.15;
+  // Lit surfaces get their colour back: night desaturates, light restores.
+  vec3 rich = max(mix(vec3(L0), d, 1.3), 0.0);
+  col += rich * (WARM * lit * 1.45 + litH * 1.2) * solid;
+  // A little light hangs in the air around each beam.
+  col += WARM * air * 0.005;
   col += vec3(1.0, 0.70, 0.38) * halo * 0.5;
 
   // Soft shoulder so the hottest scallops roll off instead of clipping.
-  col = 1.0 - exp(-col * 1.5);
+  col = 1.0 - exp(-col * 1.7);
+  // Corners fall away so the eye stays on the house.
+  col *= 1.0 - 0.38 * smoothstep(0.38, 0.8, length((cuv - vec2(0.55, 0.52)) * vec2(1.0, 1.15)));
 
   // The drawing the page opens on, dissolving into the photograph.
   if (uIntro > 0.001) {
@@ -282,9 +311,11 @@ void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   // A crisp bulb with a tight bloom. The glow on the house itself is done
   // in the photo shader, where it lands on real surfaces.
-  float core = smoothstep(0.26, 0.12, r);
-  float bloom = pow(max(1.0 - r, 0.0), 4.0) * 0.38;
-  vec3 col = mix(vCol, vec3(1.0), 0.3) * core * 1.5 + vCol * bloom * 0.9;
+  float core = smoothstep(0.32, 0.14, r);
+  float hot = smoothstep(0.10, 0.0, r);
+  float bloom = pow(max(1.0 - r, 0.0), 3.0) * 0.6;
+  // Saturated glass with a white-hot point at its centre.
+  vec3 col = vCol * core * 2.4 + vec3(1.0) * hot * 0.7 + vCol * bloom;
   gl_FragColor = vec4(col * uHoliday * vB, 1.0);
   #include <colorspace_fragment>
 }
@@ -379,6 +410,9 @@ export default function PhotoStage() {
       uCur: { value: new THREE.Vector2(0.8, 0.6) },
       uCurInt: { value: 0 },
       uSeg: { value: [] as THREE.Vector4[] },
+      uSegI: { value: [] as THREE.Vector2[] },
+      uPal: { value: Array.from({ length: 4 }, () => new THREE.Vector3(1, 0.8, 0.52)) },
+      uPalN: { value: 1 },
       uWin: { value: WINDOWS.map((w) => new THREE.Vector4(w[0] / 100, w[1] / 100, w[2] / 100, w[3] / 100)) },
       uWinI: { value: 0 },
       tFx: { value: null as THREE.Texture | null },
@@ -399,12 +433,14 @@ export default function PhotoStage() {
     const pts: number[] = [];
     const bulb: number[] = [];
     const segs: THREE.Vector4[] = [];
+    const segInfo: THREE.Vector2[] = [];
     for (const line of STRINGS) {
       for (let i = 0; i < line.length - 1; i++) {
         const [ax, ay] = line[i];
         const [bx, by] = line[i + 1];
         segs.push(new THREE.Vector4((ax / 100) * IMG_ASPECT, ay / 100, (bx / 100) * IMG_ASPECT, by / 100));
         const n = Math.max(2, Math.round(Math.hypot((bx - ax) * IMG_ASPECT, by - ay) / 1.05));
+        segInfo.push(new THREE.Vector2(n, pts.length / 2 - (i === 0 ? 0 : 1)));
         // Skip the first bulb of a continuing run so corners are not doubled.
         for (let j = i === 0 ? 0 : 1; j <= n; j++) {
           pts.push((ax + ((bx - ax) * j) / n) / 100, (ay + ((by - ay) * j) / n) / 100);
@@ -435,15 +471,19 @@ export default function PhotoStage() {
         idx.push(k);
       }
     }
-    while (segs.length < 12) segs.push(new THREE.Vector4(9, 9, 9, 9));
+    while (segs.length < 12) {
+      segs.push(new THREE.Vector4(9, 9, 9, 9));
+      segInfo.push(new THREE.Vector2(1, 0));
+    }
     uniforms.uSeg.value = segs;
+    uniforms.uSegI.value = segInfo;
     const bulbGeo = new THREE.BufferGeometry();
     bulbGeo.setAttribute('aUv', new THREE.Float32BufferAttribute(pts, 2));
     bulbGeo.setAttribute('aBulb', new THREE.Float32BufferAttribute(bulb, 2));
     bulbGeo.setAttribute('aIdx', new THREE.Float32BufferAttribute(idx, 1));
     bulbGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array((pts.length / 2) * 3), 3));
-    const pal = Array.from({ length: 4 }, () => new THREE.Vector3(1, 0.8, 0.52));
-    const bulbUniforms = { ...view, uPx: { value: 10 }, uHoliday: uniforms.uHoliday, uPal: { value: pal }, uPalN: { value: 1 } };
+    const pal = uniforms.uPal.value;
+    const bulbUniforms = { ...view, uPx: { value: 10 }, uHoliday: uniforms.uHoliday, uPal: uniforms.uPal, uPalN: uniforms.uPalN };
     const bulbs = new THREE.Points(
       bulbGeo,
       new THREE.ShaderMaterial({ vertexShader: bulbVertex, fragmentShader: bulbFragment, uniforms: bulbUniforms, transparent: true, blending: THREE.AdditiveBlending, depthTest: false }),
@@ -469,12 +509,12 @@ export default function PhotoStage() {
     const applyPalette = (name: string) => {
       const list = PALETTES[name] ?? PALETTES.warm;
       list.forEach((c, k) => pal[k].set(c[0], c[1], c[2]));
-      bulbUniforms.uPalN.value = list.length;
+      uniforms.uPalN.value = list.length;
       // Light thrown on the house takes the average colour of the bulbs.
       const avg = list.reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map((v) => v / list.length);
       const m = Math.max(...avg);
       if (name === 'warm') uniforms.uHolTint.value.set(1.0, 0.6, 0.29);
-      else uniforms.uHolTint.value.set((avg[0] / m) * 0.8 + 0.2, (avg[1] / m) * 0.8 + 0.2, (avg[2] / m) * 0.8 + 0.2);
+      else uniforms.uHolTint.value.set(avg[0] / m, avg[1] / m, avg[2] / m);
     };
     const onChoice = (ev: Event) => {
       const d = (ev as CustomEvent).detail ?? {};
@@ -497,7 +537,7 @@ export default function PhotoStage() {
       view.uF.value.set(af > IMG_ASPECT ? 1 : af / IMG_ASPECT, af > IMG_ASPECT ? IMG_ASPECT / af : 1);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, dprCap));
       renderer.setSize(layout.w, layout.h);
-      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.0125 * renderer.getPixelRatio();
+      bulbUniforms.uPx.value = ((layout.h * frame) / view.uF.value.y) * 0.0155 * renderer.getPixelRatio();
     };
     resize();
     const ro = new ResizeObserver(resize);
