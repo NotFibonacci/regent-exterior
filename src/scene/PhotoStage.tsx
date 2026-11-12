@@ -91,10 +91,7 @@ const STRINGS: [number, number][][] = [
 // View per scene section: centre of interest (image %) and zoom.
 const KEYS = [
   { c: [50, 52], z: 0.8 }, // day photo: the approved opening shot
-  { c: [48, 66], z: 0.98 },
-  { c: [64, 68], z: 1.3 },
-  { c: [60, 40], z: 1.12 },
-  { c: [55, 56], z: 0.85 },
+  { c: [55, 56], z: 0.85 }, // night photo: the whole house, for the lighting buttons
 ];
 
 const vertex = /* glsl */ `

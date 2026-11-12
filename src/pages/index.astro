@@ -15,42 +15,25 @@ import { site } from '../config/site';
       <div class="copy reveal">
         <p class="label" style="--i:0">Architectural lighting · Central Maryland</p>
         <h1 style="--i:1">Your home, <em>after dark.</em></h1>
-        <p class="body" style="--i:2">Lighting designed for the house you already have. Scroll, and it comes on one layer at a time.</p>
+        <p class="body" style="--i:2">Lighting designed for the house you already have. Scroll down, then choose what comes on.</p>
         <p class="hint" style="--i:3">Move across the house. The light is yours.</p>
       </div>
     </section>
 
-    <section class="scene" data-scene="path">
+    <section class="scene" data-scene="design">
       <div class="copy reveal">
-        <p class="label" style="--i:0">One · The approach</p>
-        <h2 style="--i:1">First, <em>the way in.</em></h2>
-        <p class="body" style="--i:2">Low lights along the flagstones mark each step of the walk, and the porch light brings you to the door.</p>
-      </div>
-    </section>
-
-    <section class="scene" data-scene="architecture">
-      <div class="copy reveal">
-        <p class="label" style="--i:0">Two · The architecture</p>
-        <h2 style="--i:1">Then <em>the stone.</em></h2>
-        <p class="body" style="--i:2">Uplights graze the walls from their base. Texture that daylight flattens comes forward, course by course.</p>
-      </div>
-    </section>
-
-    <section class="scene" data-scene="eaves">
-      <div class="copy reveal">
-        <p class="label" style="--i:0">Three · The roofline</p>
-        <h2 style="--i:1">Then <em>the shape of it.</em></h2>
-        <p class="body" style="--i:2">A soft wash under the eaves holds the outline of the house against the sky.</p>
-      </div>
-    </section>
-
-    <section class="scene" data-scene="holiday">
-      <div class="copy reveal">
-        <p class="label" style="--i:0">Four · The season</p>
-        <h2 style="--i:1">And for <em>December.</em></h2>
-        <p class="body" style="--i:2">Roofline and gable lighting, installed, maintained through the season and taken down after it. From ${site.holidayMinimum}.</p>
-        <div class="options" style="--i:3">
-          <div class="swatches" role="group" aria-label="Light colour">
+        <p class="label" style="--i:0">Design the lighting</p>
+        <h2 style="--i:1">Choose <em>what comes on.</em></h2>
+        <div class="layers" role="group" aria-label="Lighting" style="--i:2">
+          <button type="button" data-layer="path" aria-pressed="true">Path and porch</button>
+          <button type="button" data-layer="stone" aria-pressed="false">Stone uplights</button>
+          <button type="button" data-layer="siding" aria-pressed="false">Siding and gable</button>
+          <button type="button" data-layer="roofline" aria-pressed="false">Eaves and windows</button>
+          <button type="button" data-layer="holiday" aria-pressed="false">Holiday lights</button>
+        </div>
+        <p class="body layer-note" aria-live="polite" style="--i:3">Low lights along the flagstones mark each step, and the porch light brings you to the door.</p>
+        <div class="options" data-holiday-options hidden style="--i:4">
+          <div class="swatches" role="group" aria-label="Holiday light colour">
             <button type="button" data-palette="warm" aria-pressed="true"><span style="background:#ffcf8a"></span>Warm white</button>
             <button type="button" data-palette="cool" aria-pressed="false"><span style="background:#d6ebff"></span>Cool white</button>
             <button type="button" data-palette="multi" aria-pressed="false"><span style="background:conic-gradient(#ff3b2e 0 25%,#2fd84a 0 50%,#2f6bff 0 75%,#ff9a1f 0)"></span>Multicolour</button>
@@ -59,7 +42,7 @@ import { site } from '../config/site';
           </div>
           <button type="button" class="snow-toggle" data-snow aria-pressed="true">Snow</button>
         </div>
-        <p style="--i:4"><a class="btn" href={`mailto:${site.email}?subject=Holiday%20lighting`}>Ask about holiday lighting</a></p>
+        <p style="--i:5"><a class="btn" data-request href={`mailto:${site.email}?subject=Lighting%20design`}>Request this design</a></p>
       </div>
     </section>
   </main>
@@ -80,22 +63,65 @@ import { site } from '../config/site';
     </div>
   </footer>
 
-  <script is:inline>
+  <script is:inline define:vars={{ email: site.email, minimum: site.holidayMinimum }}>
     (function () {
-      var send = function (detail) { window.dispatchEvent(new CustomEvent('regent:holiday', { detail: detail })); };
+      var NOTES = {
+        path: 'Low lights along the flagstones mark each step, and the porch light brings you to the door.',
+        stone: 'Uplights graze the stone from its base, so every course comes forward.',
+        siding: 'A soft wash on the wing, the big shrub picked out, and a downlight under the gable peak.',
+        roofline: 'Soffit light under the eaves, and rooms glowing from inside.',
+        holiday: 'Roofline, shrubs and wreath: installed, maintained through the season and taken down after it. From $' + minimum + '.',
+      };
+      var NAMES = { path: 'Path and porch', stone: 'Stone uplights', siding: 'Siding and gable', roofline: 'Eaves and windows', holiday: 'Holiday lights' };
+      var note = document.querySelector('.layer-note');
+      var holidayOptions = document.querySelector('[data-holiday-options]');
+      var request = document.querySelector('[data-request]');
+      var layers = document.querySelectorAll('[data-layer]');
       var swatches = document.querySelectorAll('[data-palette]');
+      var snow = document.querySelector('[data-snow]');
+      var holiday = function (detail) { window.dispatchEvent(new CustomEvent('regent:holiday', { detail: detail })); };
+
+      var refresh = function () {
+        var chosen = [];
+        layers.forEach(function (b) { if (b.getAttribute('aria-pressed') === 'true') chosen.push(NAMES[b.dataset.layer]); });
+        var colour = document.querySelector('[data-palette][aria-pressed="true"]');
+        var body = 'I would like a quote for: ' + (chosen.join(', ') || 'lighting') + '.';
+        if (chosen.indexOf(NAMES.holiday) > -1 && colour) body += ' Holiday colour: ' + colour.textContent.trim() + '.';
+        request.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Lighting design') + '&body=' + encodeURIComponent(body);
+      };
+
+      layers.forEach(function (b) {
+        b.addEventListener('click', function () {
+          var on = b.getAttribute('aria-pressed') !== 'true';
+          var name = b.dataset.layer;
+          b.setAttribute('aria-pressed', String(on));
+          window.dispatchEvent(new CustomEvent('regent:lights', { detail: { layer: name, on: on } }));
+          // The note describes the layer just switched on, or failing that
+          // the last one still lit.
+          var still = [];
+          layers.forEach(function (o) { if (o.getAttribute('aria-pressed') === 'true') still.push(o.dataset.layer); });
+          note.textContent = on ? NOTES[name] : still.length ? NOTES[still[still.length - 1]] : 'Everything is off. This is the house as it stands tonight.';
+          if (name === 'holiday') {
+            holidayOptions.hidden = !on;
+            // Holiday lights bring the snow with them.
+            if (on) { snow.setAttribute('aria-pressed', 'true'); holiday({ snow: true }); }
+          }
+          refresh();
+        });
+      });
       swatches.forEach(function (b) {
         b.addEventListener('click', function () {
           swatches.forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); });
-          send({ palette: b.dataset.palette });
+          holiday({ palette: b.dataset.palette });
+          refresh();
         });
       });
-      var snow = document.querySelector('[data-snow]');
-      if (snow) snow.addEventListener('click', function () {
+      snow.addEventListener('click', function () {
         var on = snow.getAttribute('aria-pressed') !== 'true';
         snow.setAttribute('aria-pressed', String(on));
-        send({ snow: on });
+        holiday({ snow: on });
       });
+      refresh();
     })();
   </script>
 </Base>
