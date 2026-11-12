@@ -1,0 +1,63 @@
+---
+import '@fontsource-variable/newsreader';
+import '@fontsource-variable/newsreader/wght-italic.css';
+import '@fontsource-variable/instrument-sans';
+import '@fontsource/marcellus';
+import '../styles/global.css';
+import { site } from '../config/site';
+
+interface Props { title: string; description: string; }
+const { title, description } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#08090b" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <a class="skip" href="#content">Skip to content</a>
+
+    <div id="preloader" aria-hidden="true">
+      <div class="frame">
+        <img src="/regent-exterior-services.webp" alt="" width="900" height="333" />
+        <span class="lampdot"></span>
+      </div>
+    </div>
+
+    <header class="site-header">
+      <a href="/" aria-label={`${site.name} home`}>
+        <img src="/regent-exterior-services.webp" alt={site.name} width="900" height="333" />
+      </a>
+      <div class="meta">
+        <span class="license">{site.license}</span>
+        <a class="btn" href={`mailto:${site.email}?subject=Lighting%20design%20visit`}>Request a design visit</a>
+      </div>
+    </header>
+
+    <slot />
+
+    <script is:inline>
+      (function () {
+        var pre = document.getElementById('preloader');
+        var done = function () { pre && pre.classList.add('done'); };
+        // The preloader lifts when the scene has drawn its first frame, and
+        // never holds the page longer than 4 seconds or shorter than 1.6.
+        var t0 = Date.now();
+        window.addEventListener('regent:ready', function () { setTimeout(done, Math.max(0, 1600 - (Date.now() - t0))); }, { once: true });
+        setTimeout(done, 4000);
+
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) { e.target.classList.toggle('lit', e.isIntersecting); });
+        }, { threshold: 0.35 });
+        document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+      })();
+    </script>
+  </body>
+</html>
