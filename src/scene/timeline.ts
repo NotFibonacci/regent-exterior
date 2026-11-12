@@ -46,7 +46,7 @@ export function startTimeline() {
         onUpdate: (st) => {
           state.k = st.progress * (SECTIONS.length - 1);
           // Full night arrives before the first lighting section's copy does.
-          state.night = Math.min(1, state.k / 0.6);
+          state.night = Math.min(1, Math.max(0, (state.k - 0.15) / 0.55));
         },
       }),
     );

@@ -4,11 +4,13 @@ import gsap from 'gsap';
 import { startTimeline, state } from './timeline';
 import netBulbs from './nets.json';
 
-// The hero is a real photograph, relit in the browser. The daytime photo
-// holds all the surface detail; the shader grades it down to dusk and night,
-// then "switches on" fixtures by letting warm light reveal the day pixels.
-// Everything is placed in image coordinates: x and y as percentages of the
-// photo, origin top-left.
+// The hero is two real photographs of the same house. The opening dusk
+// shot is the daytime photo, graded. Every lit section uses the real night
+// photo as its base, and new fixtures light a surface map derived from it
+// (night-alb: the photo with its existing light divided out), so the light
+// lands on the real stone and siding of the real night scene.
+// Coordinates are percentages of the night photo, origin top-left, except
+// the first view key, which frames the day photo.
 
 const IMG_ASPECT = 4 / 3;
 const N = 24;
@@ -23,39 +25,39 @@ const down: [number, number] = [0, 1];
 // middle of a wall under a window; one specimen plant is picked out; the
 // entry is the warmest point; a tree behind the roof gives depth.
 const FIXTURES: Fx[] = [
-  // Path: ground fixtures on alternate edges of the flagstone walk, traced
-  // on the photo. Each has a lit cap on a short stem and a pool at its foot.
-  ...([[5, 90.6], [13, 91.5], [21, 85.8], [29, 88.3], [36, 83.6], [47, 87.6], [55, 86.6], [63, 91.6], [71, 90.2]] as [number, number][]).map(
-    (at): Fx => ({ at, cap: 1.5, reach: 0.07, squash: 2.5, power: 2.0, group: G.path }),
+  // Path: ground fixtures on alternate edges of the walk, traced on the night
+  // photo. Each has a lit cap on a short stem and a pool at its foot.
+  ...([[9, 95.6], [19, 93.6], [28, 90.0], [36, 91.6], [52, 89.2], [62, 90.8], [72, 91.8]] as [number, number][]).map(
+    (at): Fx => ({ at, cap: 1.4, reach: 0.075, squash: 2.5, power: 3.4, group: G.path }),
   ),
   // Porch: a downlight over the door, on with the path.
-  { at: [46.2, 57.0], dir: down, deg: 44, reach: 0.27, power: 2.8, group: G.path },
-  // Stone: grazers at the two piers of the front gable and beside the door.
-  { at: [54.6, 82.6], dir: [0.02, -1], deg: 21, reach: 0.34, power: 4.6, group: G.uplight },
-  { at: [75.2, 86.2], dir: [-0.02, -1], deg: 21, reach: 0.37, power: 4.6, group: G.uplight },
-  { at: [43.5, 79.2], dir: up, deg: 15, reach: 0.38, power: 4.2, group: G.uplight },
+  { at: [49.6, 61.0], dir: down, deg: 44, reach: 0.22, power: 3.3, group: G.path },
+  // Stone: grazers at the piers of the front gable and beside the door.
+  { at: [55.8, 84.5], dir: [0.02, -1], deg: 21, reach: 0.36, power: 6.9, group: G.uplight },
+  { at: [82.0, 86.0], dir: [-0.02, -1], deg: 21, reach: 0.4, power: 6.9, group: G.uplight },
+  { at: [46.6, 84.0], dir: up, deg: 15, reach: 0.4, power: 6.0, group: G.uplight },
   // The clipped tree by the steps, lit as a specimen.
-  { at: [53.2, 77.5], dir: up, deg: 40, reach: 0.17, power: 3.0, group: G.uplight },
-  // The corner, so the house reads as a volume and not a flat front.
-  { at: [80.6, 87.4], dir: [0.04, -1], deg: 17, reach: 0.44, power: 3.4, group: G.uplight },
-  // Siding: one soft wash between the wing windows, the big shrub, and a
-  // downlight tucked under the gable peak.
-  { at: [26.2, 79.5], dir: up, deg: 44, reach: 0.25, power: 3.0, group: G.wash },
-  { at: [19, 80], dir: [0.1, -1], deg: 60, reach: 0.14, power: 1.6, group: G.wash },
-  { at: [61.0, 23.2], dir: down, deg: 36, reach: 0.33, power: 3.2, group: G.wash },
+  { at: [59.8, 84.0], dir: up, deg: 40, reach: 0.2, power: 4.5, group: G.uplight },
+  // The corner, so the house reads as a volume.
+  { at: [86.0, 88.5], dir: [0.03, -1], deg: 17, reach: 0.48, power: 4.8, group: G.uplight },
+  // Siding: one wash on the wing, the big shrub, and a downlight under the
+  // gable peak.
+  { at: [30.0, 78.0], dir: up, deg: 44, reach: 0.26, power: 4.5, group: G.wash },
+  { at: [21.0, 86.0], dir: [0.1, -1], deg: 60, reach: 0.14, power: 2.4, group: G.wash },
+  { at: [65.6, 23.6], dir: down, deg: 36, reach: 0.3, power: 4.8, group: G.wash },
   // Roofline: soffit light under the wing eave.
-  { at: [23.5, 58.2], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
-  { at: [29.5, 57.6], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
-  // The lantern by the door comes up with nightfall.
-  { at: [49.3, 61.2], reach: 0.1, power: 1.9, group: G.entry },
+  { at: [26.5, 61.0], dir: down, deg: 50, reach: 0.16, power: 3.0, group: G.eave },
+  { at: [33.5, 60.0], dir: down, deg: 50, reach: 0.16, power: 3.0, group: G.eave },
+  // The lantern by the door.
+  { at: [52.6, 65.8], reach: 0.08, power: 1.0, group: G.entry },
 ];
 
 // Windows that glow from inside at night (centre x, y and half size, image %).
 const WINDOWS: [number, number, number, number][] = [
-  [61.1, 37.6, 2.5, 4.6],
-  [47.0, 44.6, 1.1, 3.6],
-  [23.8, 64.2, 1.1, 3.3],
-  [28.5, 64.4, 1.2, 3.8],
+  [66.6, 40.2, 2.6, 4.6],
+  [51.3, 46.6, 1.0, 3.2],
+  [27.0, 66.2, 1.3, 3.6],
+  [31.9, 66.6, 1.4, 4.0],
 ];
 
 // Shrub net lights are generated from the photo: bulbs sit only on real
@@ -72,27 +74,27 @@ const PALETTES: Record<string, [number, number, number][]> = {
 };
 
 // Stem of the clipped tree, wrapped; and a lit wreath on the door.
-const TRUNK: [[number, number], [number, number]] = [[53.3, 73.4], [53.6, 80.6]];
-const WREATH = { c: [46.75, 62.9] as [number, number], r: [0.95, 1.5] as [number, number] };
+const TRUNK: [[number, number], [number, number]] = [[59.6, 74.2], [59.9, 83.0]];
+const WREATH = { c: [51.0, 67.4] as [number, number], r: [0.9, 1.4] as [number, number] };
 
 // Traced on the photo along the outer roof edge, so every run is dead
 // straight on the real line of the house.
 const STRINGS: [number, number][][] = [
-  [[19.7, 56.9], [33.1, 55.1]],
-  [[33.9, 54.6], [42.7, 43.0]],
-  [[44.8, 38.1], [47.5, 33.2], [50.3, 36.3]],
-  [[50.6, 39.6], [61.0, 19.6], [74.3, 32.3]],
-  [[75.4, 31.7], [82.4, 14.6], [89.4, 48.3]],
-  [[51.0, 54.6], [74.4, 52.3]],
+  [[22.6, 60.0], [37.2, 57.7]],
+  [[37.8, 57.3], [45.6, 46.6]],
+  [[48.6, 41.6], [51.2, 37.0], [54.0, 39.6]],
+  [[56.0, 41.4], [65.6, 21.0], [80.8, 32.0]],
+  [[82.8, 32.6], [87.7, 15.6], [95.2, 54.0]],
+  [[55.6, 57.6], [81.8, 54.6]],
 ];
 
 // View per scene section: centre of interest (image %) and zoom.
 const KEYS = [
-  { c: [50, 52], z: 0.8 },
-  { c: [44, 58], z: 0.98 },
-  { c: [60, 64], z: 1.28 },
-  { c: [57, 44], z: 1.12 },
-  { c: [50, 51], z: 0.8 },
+  { c: [50, 52], z: 0.8 }, // day photo: the approved opening shot
+  { c: [48, 66], z: 0.98 },
+  { c: [64, 68], z: 1.3 },
+  { c: [60, 40], z: 1.12 },
+  { c: [55, 56], z: 0.85 },
 ];
 
 const vertex = /* glsl */ `
@@ -107,29 +109,32 @@ const fragment = /* glsl */ `
 uniform sampler2D tDay;
 uniform sampler2D tSky;
 uniform sampler2D tDraw;
+uniform sampler2D tNight;
+uniform sampler2D tAlb;
+uniform sampler2D tNSky;
+uniform sampler2D tFx;
 uniform vec2 uTexel;
-uniform vec2 uC;      // view centre, image uv
-uniform float uZ;     // zoom
-uniform vec2 uF;      // fraction of the image visible at zoom 1
-uniform vec2 uFrame;  // x: share of screen height the photo fills, y: shift right
-uniform float uNight;
+uniform vec2 uC;
+uniform float uZ;
+uniform vec2 uF;
+uniform vec2 uFrame;
+uniform float uMix;   // 0: day dusk shot, 1: night photo
 uniform float uHoliday;
 uniform float uIntro;
+uniform float uSnow;
 uniform vec2 uLP[N];
-uniform vec2 uLH[N]; // where the visible source sits (a path light's cap)
+uniform vec2 uLH[N];
 uniform vec2 uLD[N];
-uniform vec3 uLA[N];  // cos of cone half-angle (-1 = all round), reach, vertical squash
+uniform vec3 uLA[N];
 uniform float uLI[N];
 uniform vec2 uCur;
 uniform float uCurInt;
 uniform vec4 uSeg[S];
-uniform vec4 uWin[W];
-uniform sampler2D tFx;
-uniform float uSnow;
-uniform vec3 uHolTint;
-uniform vec2 uSegI[S]; // bulbs on the run, index of its first bulb
+uniform vec2 uSegI[S];
 uniform vec3 uPal[4];
 uniform float uPalN;
+uniform vec3 uHolTint;
+uniform vec4 uWin[W];
 uniform float uWinI;
 varying vec2 vUv;
 
@@ -138,148 +143,127 @@ const vec3 INK = vec3(0.0024, 0.0027, 0.0034);
 const float A = ${IMG_ASPECT.toFixed(5)};
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
-vec3 day(vec2 uv) { return texture2D(tDay, vec2(uv.x, 1.0 - uv.y)).rgb; }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-float segDist(vec2 p, vec4 s) {
-  vec2 pa = p - s.xy, ba = s.zw - s.xy;
-  return length(pa - ba * clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0));
+float albL(vec2 t) { return luma(texture2D(tAlb, t).rgb); }
+
+// The visitor's hand-held lamp, raking across whatever surface it is given.
+float handLamp(vec2 p, vec2 grad) {
+  vec2 v = p - uCur;
+  float dist = length(v) + 1e-4;
+  float r = dist / 0.2;
+  float att = pow(max(1.0 - r, 0.0), 1.5) / (0.45 + 2.2 * r);
+  return uCurInt * att * clamp(1.0 - 11.0 * dot(grad, v / dist), 0.4, 1.9);
 }
 
 void main() {
   float yt = (1.0 - vUv.y) / uFrame.x;
   vec2 uv = uC + (vec2(vUv.x - uFrame.y, yt) - 0.5) * uF / uZ;
   vec2 cuv = clamp(uv, 0.0, 1.0);
-
-  vec3 d = day(cuv);
-  float L0 = luma(d);
-  vec2 fx = texture2D(tFx, vec2(cuv.x, 1.0 - cuv.y)).rg;
-  // Settled snow: replaces the surface colour but keeps its shading, so
-  // shingle lines and footprints of shadow still read through it.
-  d = mix(d, vec3(0.80, 0.84, 0.90) * (0.60 + 0.62 * L0), fx.g * uSnow);
-  L0 = luma(d);
-  float sky = texture2D(tSky, vec2(cuv.x, 1.0 - cuv.y)).r;
-
-  // Surface relief, read from the photo itself: the brightness gradient
-  // stands in for a normal, so a moving light rakes across stone and laps.
-  vec2 e = uTexel * 1.5;
-  vec2 grad = vec2(luma(day(cuv + vec2(e.x, 0.0))) - luma(day(cuv - vec2(e.x, 0.0))),
-                   luma(day(cuv + vec2(0.0, e.y))) - luma(day(cuv - vec2(0.0, e.y))));
-
-  // Dusk and night grades of the same pixels.
-  vec3 cool = mix(vec3(L0), d, 0.5);
-  vec3 groundDusk = mix(vec3(L0), d, 0.85) * vec3(0.50, 0.55, 0.74) * 0.60;
-  // Night is properly dark and cool, so that what is lit carries the picture.
-  vec3 groundNight = pow(cool, vec3(1.2)) * vec3(0.20, 0.32, 0.70) * 0.062;
-  vec3 skyDusk = d * vec3(0.34, 0.37, 0.62) * 0.8 + vec3(0.42, 0.17, 0.05) * smoothstep(0.2, 0.62, cuv.y) * 0.5;
-  // The sky is rebuilt for night, not dimmed: the day's cloud only survives
-  // as faint moonlit texture. In between it passes through a real twilight,
-  // navy overhead with the last ember low on the horizon.
-  float cloud = pow(L0, 2.5);
-  vec3 skyTwi = mix(vec3(0.012, 0.026, 0.095), vec3(0.52, 0.17, 0.06), pow(smoothstep(0.16, 0.62, cuv.y), 2.0)) * (0.5 + 0.7 * L0);
-  vec3 skyNight = mix(vec3(0.0025, 0.006, 0.026), vec3(0.013, 0.026, 0.078), smoothstep(0.0, 0.62, cuv.y)) * (0.75 + 0.5 * cloud);
-  vec2 mv = (cuv - vec2(0.27, 0.235)) * vec2(A, 1.0);
-  float md = dot(mv, mv);
-  // Moon, its halo, and the cloud around it catching the light.
-  skyNight += vec3(0.74, 0.82, 1.0) * (smoothstep(0.000210, 0.000165, md) * 1.2 + exp(-md / 0.004) * 0.10 + exp(-md / 0.06) * 0.03);
-  skyNight += vec3(0.10, 0.14, 0.26) * cloud * exp(-md / 0.035) * 0.9;
-  // Two layers of stars, thinned where cloud is thick.
-  vec2 sg = cuv * vec2(A, 1.0);
-  float stars = step(0.990, hash(floor(sg * 210.0))) * smoothstep(0.22, 0.02, length(fract(sg * 210.0) - 0.5)) * 0.35
-              + step(0.9965, hash(floor(sg * 120.0) + 7.0)) * smoothstep(0.2, 0.02, length(fract(sg * 120.0) - 0.5)) * 0.9;
-  skyNight += vec3(0.82, 0.88, 1.0) * stars * (1.0 - 0.75 * cloud);
-  float n1 = smoothstep(0.0, 0.5, uNight), n2 = smoothstep(0.5, 1.0, uNight);
-  vec3 skyCol = mix(mix(skyDusk, skyTwi, n1), skyNight, n2);
-  vec3 col = mix(mix(groundDusk, groundNight, smoothstep(0.1, 0.9, uNight)), skyCol, sky);
-
-  // Fixtures.
+  vec2 t = vec2(cuv.x, 1.0 - cuv.y);
   vec2 p = vec2(cuv.x * A, cuv.y);
-  float solid = 1.0 - sky;
-  float lit = 0.0;
-  vec3 litH = vec3(0.0);
-  float air = 0.0;
-  float halo = 0.0;
-  for (int i = 0; i < N; i++) {
-    float I = uLI[i];
-    if (I <= 0.0) continue;
-    vec2 v0 = p - uLP[i];
-    vec2 v = vec2(v0.x, v0.y * uLA[i].z);
-    float dist = length(v) + 1e-4;
-    vec2 n = v / dist;
-    float c = uLA[i].x;
-    // Gaussian across the beam: a scallop with no hard edge.
-    float spot = c < -0.5 ? 1.0 : exp(-2.4 * pow(acos(clamp(dot(n, uLD[i]), -1.0, 1.0)) / acos(c), 2.0));
-    float r = dist / uLA[i].y;
-    // The beam opens a little above its source, so there is no hot dot
-    // at the fixture, then falls away up the wall.
-    float att = (c < -0.5 ? 1.0 : smoothstep(0.0, 0.07, r)) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
-    float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
-    lit += I * spot * att * rake;
-    air += (c < -0.5 ? 0.25 : 1.0) * I * spot * exp(-dot(v0, v0) / 0.006);
-    vec2 vh = p - uLH[i];
-    halo += I * exp(-dot(vh, vh) / 0.0000042);
+
+  // ---- The opening shot: the day photo graded to dusk ----
+  vec3 dayCol = vec3(0.0);
+  if (uMix < 0.999) {
+    vec3 d = texture2D(tDay, t).rgb;
+    float L = luma(d);
+    float sk = texture2D(tSky, t).r;
+    vec3 groundDusk = mix(vec3(L), d, 0.85) * vec3(0.50, 0.55, 0.74) * 0.60;
+    vec3 skyDusk = d * vec3(0.34, 0.37, 0.62) * 0.8 + vec3(0.42, 0.17, 0.05) * smoothstep(0.2, 0.62, cuv.y) * 0.5;
+    dayCol = mix(groundDusk, skyDusk, sk);
+    vec2 e = vec2(1.0 / 2400.0, 1.0 / 1800.0) * 1.5;
+    vec2 g = vec2(luma(texture2D(tDay, t + vec2(e.x, 0.0)).rgb) - luma(texture2D(tDay, t - vec2(e.x, 0.0)).rgb),
+                  -(luma(texture2D(tDay, t + vec2(0.0, e.y)).rgb) - luma(texture2D(tDay, t - vec2(0.0, e.y)).rgb)));
+    dayCol += d * WARM * handLamp(p, g) * (1.0 - sk) * 1.15;
   }
 
-  // The visitor's light: a hand-held lamp close to the wall.
-  {
-    vec2 v = p - uCur;
-    float dist = length(v) + 1e-4;
-    float r = dist / 0.2;
-    float att = pow(max(1.0 - r, 0.0), 1.5) / (0.45 + 2.2 * r);
-    float rake = clamp(1.0 - 11.0 * dot(grad, v / dist), 0.4, 1.9);
-    lit += uCurInt * att * rake;
-  }
+  // ---- Every lit section: the real night photo ----
+  vec3 nightCol = vec3(0.0);
+  if (uMix > 0.001) {
+    vec3 base = texture2D(tNight, t).rgb;
+    vec3 alb = texture2D(tAlb, t).rgb;
+    float nsky = texture2D(tNSky, t).r;
+    vec2 fx = texture2D(tFx, t).rg;
+    float sn = fx.g * uSnow;
+    base = mix(base, vec3(0.05, 0.06, 0.095) * (0.7 + 0.8 * luma(alb)), sn);
+    alb = mix(alb, vec3(0.80, 0.82, 0.86) * (0.75 + 0.35 * luma(alb)), sn);
+    float solid = 1.0 - nsky;
 
-  // Holiday state: each string throws a tight glow onto the fascia it hangs
-  // from and a wider, fainter one onto the wall and roof beside it.
-  if (uHoliday > 0.001) {
-    // Nearest run, and which bulb on it is closest: the fascia takes that
-    // bulb's own colour, so a multicolour string reads as separate colours.
-    float dm = 1.0;
-    vec3 hc = uHolTint;
-    for (int i = 0; i < S; i++) {
-      vec2 pa = p - uSeg[i].xy, ba = uSeg[i].zw - uSeg[i].xy;
-      float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
-      float dd = length(pa - ba * h);
-      if (dd < dm) {
-        dm = dd;
-        hc = uPal[int(mod(floor(h * uSegI[i].x + 0.5) + uSegI[i].y, uPalN))];
-      }
+    // Relief from the surface map: a light rakes across stone and laps.
+    vec2 e = uTexel * 1.5;
+    vec2 grad = vec2(albL(t + vec2(e.x, 0.0)) - albL(t - vec2(e.x, 0.0)),
+                     -(albL(t + vec2(0.0, e.y)) - albL(t - vec2(0.0, e.y))));
+
+    float lit = 0.0;
+    float halo = 0.0;
+    float air = 0.0;
+    for (int i = 0; i < N; i++) {
+      float I = uLI[i];
+      if (I <= 0.0) continue;
+      vec2 v0 = p - uLP[i];
+      vec2 v = vec2(v0.x, v0.y * uLA[i].z);
+      float dist = length(v) + 1e-4;
+      vec2 n = v / dist;
+      float c = uLA[i].x;
+      // Gaussian across the beam: a scallop with no hard edge.
+      float spot = c < -0.5 ? 1.0 : exp(-2.4 * pow(acos(clamp(dot(n, uLD[i]), -1.0, 1.0)) / acos(c), 2.0));
+      float r = dist / uLA[i].y;
+      // The beam opens just above its source, then falls away up the wall.
+      float att = (c < -0.5 ? 1.0 : smoothstep(0.0, 0.07, r)) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
+      lit += I * spot * att * clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
+      air += (c < -0.5 ? 0.25 : 1.0) * I * spot * exp(-dot(v0, v0) / 0.006);
+      vec2 vh = p - uLH[i];
+      halo += I * exp(-dot(vh, vh) / 0.0000042);
     }
-    litH += uHoliday * (hc * exp(-dm * dm / 0.00006) * 0.85 + uHolTint * (exp(-dm * dm / 0.0030) * 0.24 + 0.03));
-    // Net-lit planting: each bulb lights the leaves around it.
-    litH += uHoliday * uHolTint * fx.r * 1.7;
+    lit += handLamp(p, grad);
+
+    // Holiday: each run tints the fascia beside it in its nearest bulb's
+    // colour, with a wider, fainter spill onto wall and roof.
+    vec3 litH = vec3(0.0);
+    if (uHoliday > 0.001) {
+      float dm = 1.0;
+      vec3 hc = uHolTint;
+      for (int i = 0; i < S; i++) {
+        vec2 pa = p - uSeg[i].xy, ba = uSeg[i].zw - uSeg[i].xy;
+        float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+        float dd = length(pa - ba * h);
+        if (dd < dm) {
+          dm = dd;
+          hc = uPal[int(mod(floor(h * uSegI[i].x + 0.5) + uSegI[i].y, uPalN))];
+        }
+      }
+      litH += uHoliday * (hc * exp(-dm * dm / 0.00006) * 0.85 + uHolTint * (exp(-dm * dm / 0.0030) * 0.24 + 0.02));
+      litH += uHoliday * uHolTint * fx.r * 1.7;
+    }
+
+    float win = 0.0;
+    for (int i = 0; i < W; i++) {
+      vec2 q = abs(cuv - uWin[i].xy) - uWin[i].zw;
+      win += 1.0 - smoothstep(-0.003, 0.002, max(q.x, q.y));
+    }
+
+    // The photo's own light stays; new light is added on the real surfaces.
+    nightCol = base * 0.6;
+    nightCol += alb * vec3(1.0, 0.52, 0.18) * win * uWinI * 0.6;
+    nightCol += alb * (WARM * lit * 1.25 + litH * 1.2) * solid;
+    nightCol += WARM * air * 0.004 + vec3(1.0, 0.70, 0.38) * halo * 0.5;
   }
 
-  // Rooms lit from inside: the day pixels of the glass, warmed.
-  float win = 0.0;
-  for (int i = 0; i < W; i++) {
-    vec2 q = abs(cuv - uWin[i].xy) - uWin[i].zw;
-    win += 1.0 - smoothstep(-0.003, 0.002, max(q.x, q.y));
-  }
-  col += d * vec3(1.0, 0.52, 0.18) * win * uWinI * 1.3;
+  // The day shot fades out, there is a beat of darkness, and the night photo
+  // fades in: the change of camera reads as nightfall, never as a double image.
+  vec3 col = dayCol * (1.0 - smoothstep(0.0, 0.5, uMix)) + nightCol * smoothstep(0.5, 1.0, uMix);
 
-  // Lit surfaces get their colour back: night desaturates, light restores.
-  vec3 rich = max(mix(vec3(L0), d, 1.3), 0.0);
-  col += rich * (WARM * lit * 1.45 + litH * 1.2) * solid;
-  // A little light hangs in the air around each beam.
-  col += WARM * air * 0.005;
-  col += vec3(1.0, 0.70, 0.38) * halo * 0.5;
-
-  // Soft shoulder so the hottest scallops roll off instead of clipping.
   col = 1.0 - exp(-col * 1.7);
-  // Corners fall away so the eye stays on the house.
-  col *= 1.0 - 0.38 * smoothstep(0.38, 0.8, length((cuv - vec2(0.55, 0.52)) * vec2(1.0, 1.15)));
+  col *= 1.0 - 0.3 * smoothstep(0.42, 0.85, length((cuv - vec2(0.55, 0.52)) * vec2(1.0, 1.15)));
 
   // The drawing the page opens on, dissolving into the photograph.
   if (uIntro > 0.001) {
-    float dr = texture2D(tDraw, vec2(cuv.x, 1.0 - cuv.y)).r;
+    float dr = texture2D(tDraw, t).r;
     vec3 paper = pow(dr, 2.2) * vec3(0.78, 0.74, 0.66) * 0.62;
-    // Strokes give way first, paper last.
     float show = smoothstep(0.0, 1.0, (1.0 - uIntro) * 1.7 - dr * 0.7);
     col = mix(paper, col, show);
   }
 
-  // The photo fades to ink where the copy sits and at its own edges.
   float inside = smoothstep(0.0, 0.14, uv.x) * smoothstep(1.0, 0.97, uv.x) * smoothstep(0.0, 0.03, uv.y) * smoothstep(1.0, 0.94, uv.y);
   inside *= uFrame.x < 0.999 ? 1.0 - smoothstep(0.80, 1.0, yt) : 1.0;
   col = mix(INK, col, inside);
@@ -408,9 +392,12 @@ export default function PhotoStage() {
       ...view,
       tDay: { value: null as THREE.Texture | null },
       tSky: { value: null as THREE.Texture | null },
+      tNight: { value: null as THREE.Texture | null },
+      tAlb: { value: null as THREE.Texture | null },
+      tNSky: { value: null as THREE.Texture | null },
+      uMix: { value: 0 },
       tDraw: { value: null as THREE.Texture | null },
-      uTexel: { value: new THREE.Vector2(1 / 2400, 1 / 1800) },
-      uNight: { value: 0 },
+      uTexel: { value: new THREE.Vector2(1 / 2048, 1 / 1538) },
       uHoliday: { value: 0 },
       uIntro: { value: 1 },
       uLP: { value: lp },
@@ -610,7 +597,7 @@ export default function PhotoStage() {
       uniforms.uCur.value.set(cur.x * IMG_ASPECT, cur.y);
       uniforms.uCurInt.value = 0.55 + 0.75 * state.night;
 
-      uniforms.uNight.value = state.night;
+      uniforms.uMix.value = state.night;
       // Rooms come on with the roofline section, not before.
       uniforms.uWinI.value = 0.5 * Math.min(1, state.groups[G.eave]);
       uniforms.uHoliday.value = state.groups[G.holiday];
@@ -626,14 +613,25 @@ export default function PhotoStage() {
       renderer.render(scene, camera);
     };
 
-    Promise.all([load(big ? 'day-2400.webp' : 'day-1400.webp', true), load('sky.png', false), load('drawing.webp', false), load('fx.png', false)])
-      .then(([dayT, skyT, drawT, fxT]) => {
+    Promise.all([
+      load(big ? 'day-2400.webp' : 'day-1400.webp', true),
+      load('sky.png', false),
+      load('drawing.webp', false),
+      load('night-fx.png', false),
+      load(big ? 'night-2048.webp' : 'night-1280.webp', true),
+      load('night-alb.webp', true),
+      load('night-sky.png', false),
+    ])
+      .then(([dayT, skyT, drawT, fxT, nightT, albT, nskyT]) => {
         if (!alive) return;
         uniforms.tDay.value = dayT;
         uniforms.tSky.value = skyT;
         uniforms.tDraw.value = drawT;
         uniforms.tFx.value = fxT;
-        const img = dayT.image as HTMLImageElement;
+        uniforms.tNight.value = nightT;
+        uniforms.tAlb.value = albT;
+        uniforms.tNSky.value = nskyT;
+        const img = albT.image as HTMLImageElement;
         uniforms.uTexel.value.set(1 / img.width, 1 / img.height);
         raf = requestAnimationFrame(frame);
         window.dispatchEvent(new Event('regent:ready'));
