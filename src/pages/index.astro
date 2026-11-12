@@ -1,13 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
-import Stage from '../scene/Stage.tsx';
+import PhotoStage from '../scene/PhotoStage.tsx';
 import { site } from '../config/site';
 ---
 <Base
   title="Regent Exterior Services | Architectural and holiday lighting in Central Maryland"
   description="Architectural and holiday lighting, designed and installed for homes in Baltimore, Anne Arundel, Howard, Prince George's and Carroll Counties. MHIC #41139."
 >
-  <div id="stage"><Stage client:only="react" /></div>
+  <div id="stage" data-assets="/home/"><PhotoStage client:only="react" /></div>
+  <p class="preview-note">Lighting preview on a real home. Not a completed installation.</p>
 
   <main id="content">
     <section class="scene" data-scene="dusk">
