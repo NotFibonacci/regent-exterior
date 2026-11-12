@@ -13,7 +13,7 @@ const IMG_ASPECT = 4 / 3;
 const N = 24;
 const G = { path: 0, uplight: 1, wash: 2, eave: 3, holiday: 4, entry: 5 } as const;
 
-type Fx = { at: [number, number]; dir?: [number, number]; deg?: number; reach: number; squash?: number; power: number; group: number };
+type Fx = { cap?: number; at: [number, number]; dir?: [number, number]; deg?: number; reach: number; squash?: number; power: number; group: number };
 const up: [number, number] = [0, -1];
 const down: [number, number] = [0, 1];
 
@@ -22,12 +22,13 @@ const down: [number, number] = [0, 1];
 // middle of a wall under a window; one specimen plant is picked out; the
 // entry is the warmest point; a tree behind the roof gives depth.
 const FIXTURES: Fx[] = [
-  // Path: few, staggered either side of the walk, never a runway.
-  { at: [14, 90.5], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
-  { at: [28, 86.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
-  { at: [40, 87.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
-  { at: [57, 87.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
-  { at: [70, 91.2], reach: 0.08, squash: 3.2, power: 1.25, group: G.path },
+  // Path: ground fixtures on alternate edges of the flagstone walk, traced
+  // on the photo. Each has a lit cap on a short stem and a pool at its foot.
+  ...([[5, 90.6], [13, 91.5], [21, 85.8], [29, 88.3], [36, 83.6], [47, 87.6], [55, 86.6], [63, 91.6], [71, 90.2]] as [number, number][]).map(
+    (at): Fx => ({ at, cap: 1.5, reach: 0.07, squash: 2.5, power: 2.0, group: G.path }),
+  ),
+  // Porch: a downlight over the door, on with the path.
+  { at: [46.2, 57.0], dir: down, deg: 44, reach: 0.27, power: 2.8, group: G.path },
   // Stone: grazers at the two piers of the front gable and beside the door.
   { at: [54.6, 82.6], dir: [0.02, -1], deg: 21, reach: 0.34, power: 4.6, group: G.uplight },
   { at: [75.2, 86.2], dir: [-0.02, -1], deg: 21, reach: 0.37, power: 4.6, group: G.uplight },
@@ -41,12 +42,11 @@ const FIXTURES: Fx[] = [
   { at: [26.2, 79.5], dir: up, deg: 44, reach: 0.25, power: 3.0, group: G.wash },
   { at: [19, 80], dir: [0.1, -1], deg: 60, reach: 0.14, power: 1.6, group: G.wash },
   { at: [61.0, 23.2], dir: down, deg: 36, reach: 0.33, power: 3.2, group: G.wash },
-  // Roofline: soffit light under the wing eave and over the door.
+  // Roofline: soffit light under the wing eave.
   { at: [23.5, 58.2], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
   { at: [29.5, 57.6], dir: down, deg: 50, reach: 0.17, power: 2.2, group: G.eave },
-  { at: [46.2, 57.0], dir: down, deg: 44, reach: 0.27, power: 2.8, group: G.eave },
   // The lantern by the door comes up with nightfall.
-  { at: [49.3, 61.2], reach: 0.07, power: 1.0, group: G.entry },
+  { at: [49.3, 61.2], reach: 0.1, power: 1.9, group: G.entry },
 ];
 
 // Windows that glow from inside at night (centre x, y and half size, image %).
@@ -78,7 +78,7 @@ const STRINGS: [number, number][][] = [
 // View per scene section: centre of interest (image %) and zoom.
 const KEYS = [
   { c: [50, 52], z: 0.8 },
-  { c: [42, 68], z: 1.12 },
+  { c: [40, 74], z: 1.15 },
   { c: [60, 64], z: 1.28 },
   { c: [57, 44], z: 1.12 },
   { c: [50, 51], z: 0.8 },
@@ -105,6 +105,7 @@ uniform float uNight;
 uniform float uHoliday;
 uniform float uIntro;
 uniform vec2 uLP[N];
+uniform vec2 uLH[N]; // where the visible source sits (a path light's cap)
 uniform vec2 uLD[N];
 uniform vec3 uLA[N];  // cos of cone half-angle (-1 = all round), reach, vertical squash
 uniform float uLI[N];
@@ -171,7 +172,8 @@ void main() {
     float att = smoothstep(0.0, 0.07, r) * pow(max(1.0 - r, 0.0), 1.5) / (0.55 + 2.2 * r);
     float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
     lit += I * spot * att * rake;
-    halo += I * exp(-dot(v0, v0) / 0.0000035);
+    vec2 vh = p - uLH[i];
+    halo += I * exp(-dot(vh, vh) / 0.000007);
   }
 
   // The visitor's light: a hand-held lamp close to the wall.
@@ -201,7 +203,7 @@ void main() {
   col += d * vec3(1.0, 0.56, 0.22) * win * uWinI;
 
   col += d * WARM * lit * solid * 1.15;
-  col += vec3(1.0, 0.66, 0.34) * halo * 0.35;
+  col += vec3(1.0, 0.70, 0.38) * halo * 0.55;
 
   // Soft shoulder so the hottest scallops roll off instead of clipping.
   col = 1.0 - exp(-col * 1.5);
@@ -294,10 +296,12 @@ export default function PhotoStage() {
       );
 
     const lp = FIXTURES.map((f) => new THREE.Vector2((f.at[0] / 100) * IMG_ASPECT, f.at[1] / 100));
+    const lh = FIXTURES.map((f) => new THREE.Vector2((f.at[0] / 100) * IMG_ASPECT, (f.at[1] - (f.cap ?? 0)) / 100));
     const ld = FIXTURES.map((f) => new THREE.Vector2(...(f.dir ?? down)).normalize());
     const la = FIXTURES.map((f) => new THREE.Vector3(f.deg ? Math.cos((f.deg * Math.PI) / 180) : -1, f.reach, f.squash ?? 1));
     while (lp.length < N) {
       lp.push(new THREE.Vector2());
+      lh.push(new THREE.Vector2());
       ld.push(new THREE.Vector2(0, 1));
       la.push(new THREE.Vector3(-1, 1, 1));
     }
@@ -313,6 +317,7 @@ export default function PhotoStage() {
       uHoliday: { value: 0 },
       uIntro: { value: 1 },
       uLP: { value: lp },
+      uLH: { value: lh },
       uLD: { value: ld },
       uLA: { value: la },
       uLI: { value: new Array<number>(N).fill(0) },
@@ -449,7 +454,8 @@ export default function PhotoStage() {
       uniforms.uCurInt.value = 0.55 + 0.75 * state.night;
 
       uniforms.uNight.value = state.night;
-      uniforms.uWinI.value = 0.05 + 0.5 * state.night;
+      // Rooms come on with the roofline section, not before.
+      uniforms.uWinI.value = 0.5 * Math.min(1, state.groups[G.eave]);
       uniforms.uHoliday.value = state.groups[G.holiday];
       state.groups[G.entry] = 0.3 + 0.7 * state.night;
       FIXTURES.forEach((fxr, n) => (uniforms.uLI.value[n] = fxr.power * state.groups[fxr.group]));
