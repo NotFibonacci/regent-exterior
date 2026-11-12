@@ -57,13 +57,18 @@ const WINDOWS: [number, number, number, number][] = [
   [28.5, 64.4, 1.2, 3.8],
 ];
 
-// Shrubs that take net lights in the holiday state (centre and radii, image %).
-const NETS: { c: [number, number]; r: [number, number]; n: number }[] = [
-  { c: [19.5, 74.5], r: [9.6, 6.6], n: 190 },
-  { c: [53.2, 66.8], r: [4.4, 6.2], n: 90 },
+// Planting dressed in the holiday state (centre and radii, image %).
+// pitch is the spacing of the net's diamond grid; glow lights the foliage.
+const NETS: { c: [number, number]; r: [number, number]; pitch: number; glow: number }[] = [
+  { c: [19.6, 74.4], r: [10.2, 6.9], pitch: 0.62, glow: 0.6 }, // the big shrub
+  { c: [13.4, 68.3], r: [4.3, 2.1], pitch: 0.62, glow: 0.45 }, // hedge behind it
+  { c: [53.2, 66.8], r: [4.5, 6.3], pitch: 0.58, glow: 0.6 }, // clipped tree by the steps
+  { c: [67.0, 84.4], r: [11.0, 1.5], pitch: 0.95, glow: 0.3 }, // low planting under the stone
 ];
+// Stem of the clipped tree, wrapped; and a lit wreath on the door.
+const TRUNK: [[number, number], [number, number]] = [[53.3, 73.4], [53.6, 80.6]];
+const WREATH = { c: [46.75, 62.9] as [number, number], r: [0.95, 1.5] as [number, number] };
 
-// Rooflines that carry holiday string lights.
 // Traced on the photo along the outer roof edge, so every run is dead
 // straight on the real line of the house.
 const STRINGS: [number, number][][] = [
@@ -113,6 +118,8 @@ uniform vec2 uCur;
 uniform float uCurInt;
 uniform vec4 uSeg[S];
 uniform vec4 uWin[W];
+uniform vec4 uNet[4];
+uniform float uNetGlow[4];
 uniform float uWinI;
 varying vec2 vUv;
 
@@ -173,7 +180,7 @@ void main() {
     float rake = clamp(1.0 - 7.0 * dot(grad, n), 0.55, 1.7);
     lit += I * spot * att * rake;
     vec2 vh = p - uLH[i];
-    halo += I * exp(-dot(vh, vh) / 0.000007);
+    halo += I * exp(-dot(vh, vh) / 0.0000042);
   }
 
   // The visitor's light: a hand-held lamp close to the wall.
@@ -192,6 +199,11 @@ void main() {
     float dm = 1.0;
     for (int i = 0; i < S; i++) dm = min(dm, segDist(p, uSeg[i]));
     lit += uHoliday * (exp(-dm * dm / 0.00012) * 1.1 + exp(-dm * dm / 0.0030) * 0.22 + 0.03);
+    // Net-lit planting: the leaves themselves take the light.
+    for (int i = 0; i < 4; i++) {
+      vec2 q = (cuv - uNet[i].xy) / uNet[i].zw;
+      lit += uHoliday * uNetGlow[i] * smoothstep(0.0, 0.7, 1.0 - dot(q, q));
+    }
   }
 
   // Rooms lit from inside: the day pixels of the glass, warmed.
@@ -203,7 +215,7 @@ void main() {
   col += d * vec3(1.0, 0.56, 0.22) * win * uWinI;
 
   col += d * WARM * lit * solid * 1.15;
-  col += vec3(1.0, 0.70, 0.38) * halo * 0.55;
+  col += vec3(1.0, 0.70, 0.38) * halo * 0.5;
 
   // Soft shoulder so the hottest scallops roll off instead of clipping.
   col = 1.0 - exp(-col * 1.5);
@@ -326,6 +338,8 @@ export default function PhotoStage() {
       uSeg: { value: [] as THREE.Vector4[] },
       uWin: { value: WINDOWS.map((w) => new THREE.Vector4(w[0] / 100, w[1] / 100, w[2] / 100, w[3] / 100)) },
       uWinI: { value: 0 },
+      uNet: { value: NETS.map((n) => new THREE.Vector4(n.c[0] / 100, n.c[1] / 100, n.r[0] / 100, n.r[1] / 100)) },
+      uNetGlow: { value: NETS.map((n) => n.glow) },
     };
 
     const scene = new THREE.Scene();
@@ -354,13 +368,42 @@ export default function PhotoStage() {
         }
       }
     }
-    // Net lights: many small points scattered through a shrub.
+    // Net lights: a diamond grid draped over each form. The grid is pushed
+    // outward toward the rim, as a net wraps a rounded shrub, and bulbs dim
+    // where the surface turns away. A few are dark, as on any real net.
     for (const net of NETS) {
-      for (let i = 0; i < net.n; i++) {
-        const a = rnd() * Math.PI * 2;
-        const r = Math.sqrt(rnd()) * 0.94;
-        pts.push((net.c[0] + Math.cos(a) * r * net.r[0]) / 100, (net.c[1] + Math.sin(a) * r * net.r[1]) / 100);
-        bulb.push(0.5 + rnd() * 0.2, 0.45 + rnd() * 0.45);
+      const rows = Math.ceil((net.r[1] * 2) / (net.pitch * 0.86));
+      const cols = Math.ceil((net.r[0] * 2) / (net.pitch * IMG_ASPECT * 0.75));
+      for (let j = 0; j <= rows; j++) {
+        for (let i = 0; i <= cols; i++) {
+          const u = ((i + (j % 2) * 0.5) / cols) * 2 - 1;
+          const v = (j / rows) * 2 - 1;
+          const d = Math.hypot(u, v);
+          // The rim follows the plant, not a perfect oval.
+          const ang = Math.atan2(v, u);
+          const rim = 0.93 + 0.07 * Math.sin(ang * 3 + net.c[0]) * Math.sin(ang * 5 + net.c[1]);
+          if (d > rim || rnd() < 0.06 || (d > rim - 0.1 && rnd() < 0.3)) continue;
+          const wrap = d > 0 ? Math.sin((d * Math.PI) / 2) / d : 1;
+          const x = net.c[0] + u * wrap * net.r[0] * 0.97 + (rnd() - 0.5) * net.pitch * 0.22;
+          const y = net.c[1] + v * wrap * net.r[1] * 0.97 + (rnd() - 0.5) * net.pitch * 0.22;
+          pts.push(x / 100, y / 100);
+          const facing = Math.sqrt(Math.max(1 - d * d, 0));
+          bulb.push(0.5 + rnd() * 0.14, (0.35 + 0.65 * facing) * (0.8 + rnd() * 0.3));
+        }
+      }
+    }
+    // Trunk wrap: tight turns up the stem.
+    for (let k = 0; k <= 16; k++) {
+      const t = k / 16;
+      pts.push((TRUNK[0][0] + (TRUNK[1][0] - TRUNK[0][0]) * t + (k % 2 ? 0.28 : -0.28)) / 100, (TRUNK[0][1] + (TRUNK[1][1] - TRUNK[0][1]) * t) / 100);
+      bulb.push(0.5, 0.85);
+    }
+    // Wreath: two rings of small lights.
+    for (const [scale, n] of [[1, 18], [0.72, 12]] as const) {
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2 + scale;
+        pts.push((WREATH.c[0] + Math.cos(a) * WREATH.r[0] * scale) / 100, (WREATH.c[1] + Math.sin(a) * WREATH.r[1] * scale) / 100);
+        bulb.push(0.42, 0.9);
       }
     }
     while (segs.length < 12) segs.push(new THREE.Vector4(9, 9, 9, 9));
