@@ -89,7 +89,7 @@ const STRINGS: [number, number][][] = [
 // View per scene section: centre of interest (image %) and zoom.
 const KEYS = [
   { c: [50, 52], z: 0.8 },
-  { c: [40, 74], z: 1.15 },
+  { c: [44, 58], z: 0.98 },
   { c: [60, 64], z: 1.28 },
   { c: [57, 44], z: 1.12 },
   { c: [50, 51], z: 0.8 },
@@ -171,14 +171,25 @@ void main() {
   // Night is properly dark and cool, so that what is lit carries the picture.
   vec3 groundNight = pow(cool, vec3(1.2)) * vec3(0.20, 0.32, 0.70) * 0.062;
   vec3 skyDusk = d * vec3(0.34, 0.37, 0.62) * 0.8 + vec3(0.42, 0.17, 0.05) * smoothstep(0.2, 0.62, cuv.y) * 0.5;
-  vec3 skyNight = pow(L0, 2.0) * vec3(0.022, 0.042, 0.125) * 1.5 + vec3(0.0015, 0.0025, 0.008);
-  // A moon behind thin cloud, and a few stars in the clear patches.
-  vec2 mv = (cuv - vec2(0.30, 0.13)) * vec2(A, 1.0);
+  // The sky is rebuilt for night, not dimmed: the day's cloud only survives
+  // as faint moonlit texture. In between it passes through a real twilight,
+  // navy overhead with the last ember low on the horizon.
+  float cloud = pow(L0, 2.5);
+  vec3 skyTwi = mix(vec3(0.012, 0.026, 0.095), vec3(0.52, 0.17, 0.06), pow(smoothstep(0.16, 0.62, cuv.y), 2.0)) * (0.5 + 0.7 * L0);
+  vec3 skyNight = mix(vec3(0.0025, 0.006, 0.026), vec3(0.013, 0.026, 0.078), smoothstep(0.0, 0.62, cuv.y)) * (0.75 + 0.5 * cloud);
+  vec2 mv = (cuv - vec2(0.27, 0.235)) * vec2(A, 1.0);
   float md = dot(mv, mv);
-  skyNight += vec3(0.72, 0.80, 1.0) * (smoothstep(0.000150, 0.000115, md) * 1.1 + exp(-md / 0.0035) * 0.09 + exp(-md / 0.05) * 0.03);
-  vec2 sg = cuv * vec2(A, 1.0) * 170.0;
-  skyNight += vec3(0.8, 0.86, 1.0) * step(0.9965, hash(floor(sg))) * smoothstep(0.2, 0.03, length(fract(sg) - 0.5)) * (1.0 - smoothstep(0.25, 0.6, L0)) * 0.5;
-  vec3 col = mix(mix(groundDusk, groundNight, uNight), mix(skyDusk, skyNight, uNight), sky);
+  // Moon, its halo, and the cloud around it catching the light.
+  skyNight += vec3(0.74, 0.82, 1.0) * (smoothstep(0.000210, 0.000165, md) * 1.2 + exp(-md / 0.004) * 0.10 + exp(-md / 0.06) * 0.03);
+  skyNight += vec3(0.10, 0.14, 0.26) * cloud * exp(-md / 0.035) * 0.9;
+  // Two layers of stars, thinned where cloud is thick.
+  vec2 sg = cuv * vec2(A, 1.0);
+  float stars = step(0.990, hash(floor(sg * 210.0))) * smoothstep(0.22, 0.02, length(fract(sg * 210.0) - 0.5)) * 0.35
+              + step(0.9965, hash(floor(sg * 120.0) + 7.0)) * smoothstep(0.2, 0.02, length(fract(sg * 120.0) - 0.5)) * 0.9;
+  skyNight += vec3(0.82, 0.88, 1.0) * stars * (1.0 - 0.75 * cloud);
+  float n1 = smoothstep(0.0, 0.5, uNight), n2 = smoothstep(0.5, 1.0, uNight);
+  vec3 skyCol = mix(mix(skyDusk, skyTwi, n1), skyNight, n2);
+  vec3 col = mix(mix(groundDusk, groundNight, smoothstep(0.1, 0.9, uNight)), skyCol, sky);
 
   // Fixtures.
   vec2 p = vec2(cuv.x * A, cuv.y);
