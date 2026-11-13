@@ -7,7 +7,8 @@ export const site = {
   email: 'Regentexteriorservices@gmail.com',
   phone: '', // e.g. '(410) 555-0100' — shown site-wide once filled in
   address: '', // street address for the footer and search listings
-  counties: ['Baltimore', 'Anne Arundel', 'Howard', "Prince George's", 'Carroll'],
+  counties: ['Baltimore', 'Anne Arundel', 'Howard', 'Montgomery', "Prince George's", 'Carroll', 'Frederick'],
+  areaLine: "Baltimore, Anne Arundel, Howard, Montgomery, Prince George's, Carroll and Frederick Counties and Baltimore City",
   holidayMinimum: 950,
 } as const;
 

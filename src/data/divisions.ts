@@ -14,7 +14,7 @@ export type Division = {
   heroPosition?: string; // CSS object-position for the hero crop
   gallery?: Photo[];
   galleryTitle?: string;
-  swatchSets?: { id: string; label: string; title: string; body: string; items: { src: string; name: string; text: string }[] }[];
+  swatchSets?: { id: string; label: string; title: string; body: string; tall?: boolean; items: { src: string; name: string; text: string }[] }[];
 };
 
 export type Photo = { src: string; alt: string; caption: string; w: number; h: number };
@@ -31,7 +31,10 @@ export const divisions: Division[] = [
     heroAspect: '900 / 1074',
     galleryTitle: 'Light, <em>let in.</em>',
     gallery: [
+      { src: '/img/windows-bay.webp', alt: 'Bright bay of tall divided-lite windows wrapping a room, with trees outside', caption: 'A full bay of divided-lite windows, set into the curve of the room.', w: 536, h: 420 },
       { src: '/img/windows-interior.webp', alt: 'Double-height living room with tall grid windows and French doors filling the room with low sun', caption: 'Tall grid windows and French doors: the reason the room is built around them.', w: 596, h: 384 },
+      { src: '/img/windows-picture.webp', alt: 'Wide white picture and casement windows looking out over a garden and pool', caption: 'Wide picture and casement units that frame the garden, not the sash.', w: 522, h: 416 },
+      { src: '/img/windows-black.webp', alt: 'Black-framed grid window and matching glass door on a porch with board and batten siding and stone', caption: 'Black frames against board and batten and stone, window and door matched.', w: 400, h: 332 },
     ],
     description: 'Window replacement for Central Maryland homes: double-hung, casement and picture windows, measured to the opening and trimmed to match. MHIC #41139.',
     services: [
@@ -140,8 +143,24 @@ export const divisions: Division[] = [
     title: 'Entry and exterior door replacement in Central Maryland',
     h1: 'The front door, <em>done properly.</em>',
     lede: 'Entry, storm and patio doors hung square, sealed tight and trimmed to suit the house they open into.',
-    image: '/img/doors.webp',
-    imageAlt: 'Yellow front door in a white surround beside stone steps and a clipped tree',
+    image: '/img/doors-navy.webp',
+    imageAlt: 'Dark navy six-panel front door with two glazed lights in a white classical surround with a cornice above stone steps',
+    heroAspect: '410 / 572',
+    swatchSets: [
+      { id: 'door-styles', label: 'Panel styles', title: 'Start with <em>the panels.</em>', body: 'The panel layout sets the character of a door before colour or hardware. These are the patterns most homes here are built around; each comes in fibreglass, steel or wood.', tall: true, items: [
+        { src: '/img/door-style-1.webp', name: 'Three-panel', text: 'One tall raised panel over two. Formal and balanced.' },
+        { src: '/img/door-style-2.webp', name: 'Flush', text: 'A clean, flat face for modern and minimal homes.' },
+        { src: '/img/door-style-3.webp', name: 'Full lite', text: 'A tall glass panel that brings light into the hall.' },
+        { src: '/img/door-style-4.webp', name: 'Four-panel', text: 'Two over two. Simple and traditional.' },
+        { src: '/img/door-style-5.webp', name: 'Four over one', text: 'Four small panels above one wide one. Colonial and craftsman.' },
+        { src: '/img/door-style-6.webp', name: 'Stacked panel', text: 'Horizontal panels stacked top to bottom. Contemporary.' },
+      ] },
+    ],
+    galleryTitle: 'An entry, <em>framed.</em>',
+    gallery: [
+      { src: '/img/doors-coral.webp', alt: 'Coral six-panel front door with full-height sidelights in white trim set into red brick', caption: 'Full-height sidelights on both sides turn a door into an entrance.', w: 354, h: 452 },
+      { src: '/img/doors-red.webp', alt: 'Deep red six-panel front door with a single sidelight and black hardware against white siding', caption: 'A single sidelight and dark hardware: a strong colour, kept simple.', w: 372, h: 534 },
+    ],
     description: 'Entry, storm and patio door replacement for Central Maryland homes, hung square and sealed, with matched trim and hardware. MHIC #41139.',
     services: [
       { name: 'Entry doors', text: 'Fibreglass, steel and wood entry doors, with sidelights and transoms where the opening allows.' },

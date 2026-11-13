@@ -5,7 +5,7 @@ const { label = 'Gallery', title, photos, note = 'Photos show the styles we inst
 ---
 <section class="section gallery">
   <div class="sec-head reveal"><p class="label" style="--i:0">{label}</p><h2 style="--i:1" set:html={title} /></div>
-  <div class:list={['gal-grid', `n${Math.min(photos.length, 3)}`]}>
+  <div class:list={['gal-grid', `n${Math.min(photos.length, 4)}`, { portrait: photos.every((p) => p.h > p.w) }]}>
     {photos.map((p, i) => (
       <figure class="gal-item reveal" style={`--i:${i};--ar:${p.w} / ${p.h}`}>
         <img src={p.src} alt={p.alt} width={p.w} height={p.h} loading="lazy" decoding="async" />

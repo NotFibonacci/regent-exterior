@@ -31,7 +31,7 @@ const business: Record<string, unknown> = {
   image: new URL('/img/lighting-full.webp', Astro.site).href,
   logo: new URL('/regent-exterior-services.webp', Astro.site).href,
   description: 'Architectural, landscape and holiday lighting, with windows, gutters, siding, stone and doors, for homes in Central Maryland.',
-  areaServed: site.counties.map((c) => ({ '@type': 'AdministrativeArea', name: `${c} County, Maryland` })),
+  areaServed: [...site.counties.map((c) => ({ '@type': 'AdministrativeArea', name: `${c} County, Maryland` })), { '@type': 'City', name: 'Baltimore, Maryland' }],
   hasCredential: { '@type': 'EducationalOccupationalCredential', credentialCategory: 'license', name: `Maryland Home Improvement Commission license ${site.licenseNumber}` },
 };
 if (site.phone) business.telephone = site.phone;

@@ -13,7 +13,7 @@ const services = ['Architectural and landscape lighting', 'Holiday lighting', 'W
       <ul class="assure">
         <li>Licensed in Maryland, {site.license}</li>
         <li>A written scope and price before any work</li>
-        <li>Serving {site.counties.slice(0, -1).join(', ')} and {site.counties.at(-1)} Counties</li>
+        <li>Serving {site.areaLine}</li>
       </ul>
     </div>
     <form class="form" name="request" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">

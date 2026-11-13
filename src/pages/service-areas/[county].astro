@@ -8,12 +8,18 @@ export function getStaticPaths() {
   return counties.map((c) => ({ params: { county: c.slug }, props: { c } }));
 }
 const { c } = Astro.props as { c: County };
+// Group 'ZIP Place' pairs by place, keeping first-seen order.
+const places = new Map<string, string[]>();
+for (const pair of c.zips.split('|')) {
+  const zip = pair.slice(0, 5), place = pair.slice(6);
+  places.set(place, [...(places.get(place) ?? []), zip]);
+}
 const schema = [
-  { '@context': 'https://schema.org', '@type': 'Service', serviceType: 'Exterior lighting and home exterior services', provider: { '@id': new URL('/#business', Astro.site).href }, areaServed: { '@type': 'AdministrativeArea', name: `${c.name}, Maryland` } },
+  { '@context': 'https://schema.org', '@type': 'Service', serviceType: 'Exterior lighting and home exterior services', provider: { '@id': new URL('/#business', Astro.site).href }, areaServed: [{ '@type': 'AdministrativeArea', name: `${c.name}, Maryland` }] },
   { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Service areas', item: new URL('/service-areas/', Astro.site).href }, { '@type': 'ListItem', position: 2, name: c.name, item: new URL(`/service-areas/${c.slug}/`, Astro.site).href }] },
 ];
 ---
-<Base title={`Exterior lighting in ${c.name}, MD | Regent Exterior Services`} description={`Architectural, landscape and holiday lighting, plus windows, gutters, siding and doors, for homes in ${c.towns.slice(0, 4).join(', ')} and across ${c.name}. MHIC #41139.`} image="/img/lighting-full.webp" schema={schema}>
+<Base title={`Exterior lighting in ${c.name}, MD | Regent Exterior Services`} description={`Architectural, landscape and holiday lighting, plus windows, gutters, siding, stone and doors, for homes in ${c.towns.slice(0, 4).join(', ')} and across ${c.name}. MHIC #41139.`} image="/img/lighting-full.webp" schema={schema}>
   <main id="content">
     <section class="page-intro">
       <p class="label"><a href="/service-areas/">Service areas</a> · {c.name}</p>
@@ -33,8 +39,8 @@ const schema = [
     </section>
 
     <section class="section">
-      <div class="sec-head"><p class="label">Where we work</p><h2>Towns we serve in {c.name}</h2></div>
-      <ul class="towns">{c.towns.map((t) => <li>{t}</li>)}</ul>
+      <div class="sec-head"><p class="label">Where we work</p><h2>Towns and ZIP codes we serve in {c.name}</h2></div>
+      <ul class="towns zipped">{[...places].map(([place, zips]) => <li><span>{place}</span> <small>{zips.join(', ')}</small></li>)}</ul>
       <p class="body small">Not listed? If you are in {c.name}, we most likely cover you. Ask.</p>
     </section>
 

@@ -3,12 +3,12 @@ import Base from '../../layouts/Base.astro';
 import LeadForm from '../../components/LeadForm.astro';
 import { counties } from '../../data/counties';
 ---
-<Base title="Service areas | Regent Exterior Services, Central Maryland" description="Regent Exterior Services works across Baltimore, Anne Arundel, Howard, Prince George's and Carroll Counties in Maryland: lighting, holiday lighting, windows, gutters, siding and doors." image="/img/house-day.webp">
+<Base title="Service areas | Regent Exterior Services, Central Maryland" description="Regent Exterior Services works across Baltimore City and Baltimore, Anne Arundel, Howard, Montgomery, Prince George's, Carroll and Frederick Counties: lighting, holiday lighting, windows, gutters, siding, stone and doors." image="/img/house-day.webp">
   <main id="content">
     <section class="page-intro">
       <p class="label">Service areas</p>
       <h1>Central Maryland, <em>county by county.</em></h1>
-      <p class="body">We work across five counties. Each has its own housing, its own rules and its own nights, and we plan for them.</p>
+      <p class="body">We work across seven counties and Baltimore City. Each has its own housing, its own rules and its own nights, and we plan for them.</p>
     </section>
     <section class="section">
       <div class="county-list">
@@ -16,6 +16,7 @@ import { counties } from '../../data/counties';
           <a class="county" href={`/service-areas/${c.slug}/`}>
             <h2>{c.name}</h2>
             <p>{c.towns.slice(0, 5).join(' · ')}</p>
+            <p class="zips">{[...new Set(c.zips.split('|').map((z) => z.slice(0, 5)))].length} ZIP codes</p>
             <span class="more">See {c.name}</span>
           </a>
         ))}

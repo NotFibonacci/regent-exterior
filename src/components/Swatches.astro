@@ -1,8 +1,8 @@
 ---
-interface Props { id: string; label: string; title: string; body: string; items: { src: string; name: string; text: string }[] }
-const { id, label, title, body, items } = Astro.props;
+interface Props { id: string; label: string; title: string; body: string; tall?: boolean; items: { src: string; name: string; text: string }[] }
+const { id, label, title, body, tall = false, items } = Astro.props;
 ---
-<section class="section materials" id={id}>
+<section class:list={['section materials', { tall }]} id={id}>
   <div class="sec-head reveal"><p class="label" style="--i:0">{label}</p><h2 style="--i:1" set:html={title} /><p class="body" style="--i:2">{body}</p></div>
   <ul class="sw-grid" role="list">
     {items.map((it, i) => (
