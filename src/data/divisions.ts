@@ -14,6 +14,7 @@ export type Division = {
   heroPosition?: string; // CSS object-position for the hero crop
   gallery?: Photo[];
   galleryTitle?: string;
+  galleryCompact?: boolean; // small equal tiles, for lower-resolution photos
   swatchSets?: { id: string; label: string; title: string; body: string; tall?: boolean; items: { src: string; name: string; text: string }[] }[];
 };
 
@@ -26,9 +27,10 @@ export const divisions: Division[] = [
     title: 'Window replacement in Central Maryland',
     h1: 'Windows, <em>fitted to the house.</em>',
     lede: 'Replacement windows sized to the openings you have, with trim and sills finished to match the rest of the house.',
-    image: '/img/windows-gable.webp',
-    imageAlt: 'Two-storey black-framed window wall set into a greige siding gable under a blue sky',
-    heroAspect: '900 / 1074',
+    image: '/img/gable-night.webp',
+    imageAlt: 'Two-storey black-framed window wall in a siding gable at night, washed by two warm uplights, above a stacked-stone base',
+    heroAspect: '4 / 5',
+    galleryCompact: true,
     galleryTitle: 'Light, <em>let in.</em>',
     gallery: [
       { src: '/img/windows-bay.webp', alt: 'Bright bay of tall divided-lite windows wrapping a room, with trees outside', caption: 'A full bay of divided-lite windows, set into the curve of the room.', w: 536, h: 420 },

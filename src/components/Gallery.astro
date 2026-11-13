@@ -1,11 +1,11 @@
 ---
 import type { Photo } from '../data/divisions';
-interface Props { label?: string; title: string; photos: Photo[]; note?: string }
-const { label = 'Gallery', title, photos, note = 'Photos show the styles we install.' } = Astro.props;
+interface Props { label?: string; title: string; photos: Photo[]; note?: string; compact?: boolean }
+const { label = 'Gallery', title, photos, note = 'Photos show the styles we install.', compact = false } = Astro.props;
 ---
 <section class="section gallery">
   <div class="sec-head reveal"><p class="label" style="--i:0">{label}</p><h2 style="--i:1" set:html={title} /></div>
-  <div class:list={['gal-grid', `n${Math.min(photos.length, 4)}`, { portrait: photos.every((p) => p.h > p.w) }]}>
+  <div class:list={['gal-grid', `n${Math.min(photos.length, 4)}`, { portrait: photos.every((p) => p.h > p.w), compact }]}>
     {photos.map((p, i) => (
       <figure class="gal-item reveal" style={`--i:${i};--ar:${p.w} / ${p.h}`}>
         <img src={p.src} alt={p.alt} width={p.w} height={p.h} loading="lazy" decoding="async" />

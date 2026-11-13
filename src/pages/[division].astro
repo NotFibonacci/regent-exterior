@@ -32,7 +32,7 @@ const schema = [
 
     {d.swatchSets?.map((set) => <Swatches {...set} />)}
 
-    {d.gallery && <Gallery title={d.galleryTitle ?? 'In detail.'} photos={d.gallery} />}
+    {d.gallery && <Gallery title={d.galleryTitle ?? 'In detail.'} photos={d.gallery} compact={d.galleryCompact} />}
 
     <section class="section split">
       <div class="sec-head"><p class="label">How we work</p><h2>Measured, written down, <em>done once.</em></h2></div>
