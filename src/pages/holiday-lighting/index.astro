@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import PageHero from '../../components/PageHero.astro';
 import Faq from '../../components/Faq.astro';
 import Gallery from '../../components/Gallery.astro';
-import { pricing } from '../../config/pricing';
+import { pricing, garlandPerFoot } from '../../config/pricing';
 import { site } from '../../config/site';
 import { counties } from '../../data/counties';
 
@@ -19,6 +19,18 @@ const schema = [
   { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
 ];
 const o = pricing.offers;
+const range = (from: number, to: number, step = 1) => Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, i) => from + i * step);
+const feet = range(50, 1000, 50);
+const trees = [
+  { k: 'ts', name: 'trees_small', label: 'Trees under 10 ft', max: 10 },
+  { k: 'tm', name: 'trees_medium', label: 'Trees 10 to 25 ft', max: 10 },
+  { k: 'sh', name: 'shrubs', label: 'Shrubs', max: 20 },
+];
+const addons = [
+  { k: 'wr', name: 'wreaths', label: 'Wreaths', opts: range(1, 10), unit: '' },
+  { k: 'wi', name: 'windows', label: 'Windows outlined', opts: range(1, 20), unit: '' },
+  { k: 'ga', name: 'garland_ft', label: 'Garland', opts: range(50, 500, 50), unit: ' ft' },
+];
 ---
 <Base title="Holiday and Christmas light installation in Central Maryland | Regent Exterior Lighting" description={`Professional holiday lighting for Central Maryland homes: designed, installed, maintained and taken down. Instant estimate online. From $${site.holidayMinimum}. MHIC #41139.`} image="/img/holiday-navy.webp" schema={schema}>
   <main id="content">
@@ -50,18 +62,34 @@ const o = pricing.offers;
             <legend>Your home</legend>
             <label>Storeys<select name="stories" data-k="stories"><option value="1">One</option><option value="2" selected>Two</option><option value="3">Three or more</option></select></label>
             <label class="check"><input type="checkbox" name="steep" value="yes" data-k="steep" /><span>Steep roof (8/12 pitch or more)</span></label>
-            <label>Roofline to light, in feet<input type="number" name="roofline_ft" min="0" step="1" value="150" inputmode="numeric" data-k="roof" /></label>
-            <label>Of that, ridges and peaks, in feet<input type="number" name="ridge_ft" min="0" step="1" value="0" inputmode="numeric" data-k="ridge" /></label>
+            <label>Roofline to light<select name="roofline_ft" data-k="roof">{feet.map((f) => <option value={f} selected={f === 150}>{f} ft</option>)}</select></label>
             <label class="check"><input type="checkbox" name="measure_for_me" value="yes" data-k="measure" /><span>I'm not sure. Measure it for me.</span></label>
           </fieldset>
           <fieldset class="est-block">
             <legend>What gets lit</legend>
-            <label>Trees under 10 ft<input type="number" name="trees_small" min="0" step="1" value="0" data-k="ts" /></label>
-            <label>Trees 10 to 25 ft<input type="number" name="trees_medium" min="0" step="1" value="0" data-k="tm" /></label>
-            <label class="check"><input type="checkbox" name="trees_large" value="yes" data-k="tl" /><span>Trees over 25 ft (quoted on site)</span></label>
-            <label>Shrubs<input type="number" name="shrubs" min="0" step="1" value="2" data-k="sh" /></label>
-            <label>Wreaths<input type="number" name="wreaths" min="0" step="1" value="0" data-k="wr" /></label>
-            <label>Windows outlined<input type="number" name="windows" min="0" step="1" value="0" data-k="wi" /></label>
+            <div class="addon">
+              <button type="button" class="addon-toggle" aria-expanded="false" aria-controls="addon-trees" data-addon-toggle>Trees and shrubs <span aria-hidden="true">+</span></button>
+              <div class="addon-panel" id="addon-trees" hidden>
+                {trees.map((t) => (
+                  <div class="addon-item">
+                    <label class="check"><input type="checkbox" data-on={t.k} /><span>{t.label}</span></label>
+                    <select name={t.name} data-k={t.k} aria-label={`How many ${t.label.toLowerCase()}`} disabled>{range(1, t.max).map((n) => <option value={n}>{n}</option>)}</select>
+                  </div>
+                ))}
+                <label class="check"><input type="checkbox" name="trees_large" value="yes" data-k="tl" /><span>Trees over 25 ft (quoted on site)</span></label>
+              </div>
+            </div>
+            <div class="addon">
+              <button type="button" class="addon-toggle" aria-expanded="false" aria-controls="addon-extras" data-addon-toggle>Add ons <span aria-hidden="true">+</span></button>
+              <div class="addon-panel" id="addon-extras" hidden>
+                {addons.map((a) => (
+                  <div class="addon-item">
+                    <label class="check"><input type="checkbox" data-on={a.k} /><span>{a.label}</span></label>
+                    <select name={a.name} data-k={a.k} aria-label={a.k === 'ga' ? 'Linear feet of garland' : `How many ${a.label.toLowerCase()}`} disabled>{a.opts.map((n) => <option value={n}>{n}{a.unit}</option>)}</select>
+                  </div>
+                ))}
+              </div>
+            </div>
           </fieldset>
           <fieldset class="est-block">
             <legend>Your plan</legend>
@@ -97,19 +125,28 @@ const o = pricing.offers;
     <Faq faqs={faqs} />
   </main>
 
-  <script is:inline define:vars={{ P: pricing }}>
+  <script is:inline define:vars={{ P: pricing, G: garlandPerFoot }}>
     (function () {
       var f = document.querySelector('[data-estimator]');
       if (!f) return;
-      var get = function (k) { var el = f.querySelector('[data-k="' + k + '"]'); return el.type === 'checkbox' ? el.checked : Number(el.value) || 0; };
+      var get = function (k) { var el = f.querySelector('[data-k="' + k + '"]'); if (!el || el.disabled) return 0; return el.type === 'checkbox' ? el.checked : Number(el.value) || 0; };
+      f.querySelectorAll('[data-addon-toggle]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var open = b.getAttribute('aria-expanded') !== 'true', p = document.getElementById(b.getAttribute('aria-controls'));
+          b.setAttribute('aria-expanded', open); p.hidden = !open; b.querySelector('span').textContent = open ? '\u2212' : '+';
+        });
+      });
+      f.querySelectorAll('[data-on]').forEach(function (c) {
+        c.addEventListener('change', function () { var s = f.querySelector('[data-k="' + c.dataset.on + '"]'); s.disabled = !c.checked; if (c.checked) s.focus(); });
+      });
       var fmt = function (n) { return '$' + (Math.round(n / 10) * 10).toLocaleString('en-US'); };
       var out = f.querySelector('[data-est-price]'), note = f.querySelector('[data-est-note]'), field = f.querySelector('[data-est-field]');
       var calc = function () {
         var offer = f.querySelector('[data-offer]:checked').dataset.offer;
-        var roof = get('roof'), ridge = Math.min(get('ridge'), roof);
+        var roof = get('roof');
         var up = Math.max(P.storyUplift[get('stories')] || 0, get('steep') ? P.steepUplift : 0);
-        var total = roof * P.rooflinePerFoot * (1 + up) + ridge * P.rooflinePerFoot * P.ridgeUplift;
-        total += get('ts') * P.treeSmall + get('tm') * P.treeMedium + get('sh') * P.shrub + get('wr') * P.wreath + get('wi') * P.window;
+        var total = roof * P.rooflinePerFoot * (1 + up);
+        total += get('ts') * P.treeSmall + get('tm') * P.treeMedium + get('sh') * P.shrub + get('wr') * P.wreath + get('wi') * P.window + get('ga') * G;
         total *= P.offers[offer].factor;
         if (get('rush')) total *= 1 + P.rushUplift;
         var lo = Math.max(P.minimum, total * P.rangeLow), hi = Math.max(P.minimum, total * P.rangeHigh);

@@ -3,7 +3,6 @@
 // and confirmed on site.
 export const pricing = {
   rooflinePerFoot: 9, // Seasonal Service, per linear foot of roofline
-  ridgeUplift: 0.25, // extra on ridge and peak footage
   storyUplift: { 1: 0, 2: 0.2, 3: 0.35 } as Record<number, number>, // on roofline
   steepUplift: 0.35, // 8/12 pitch or steeper, on roofline (replaces storey uplift if higher)
   treeSmall: 250, // under 10 ft
@@ -11,6 +10,13 @@ export const pricing = {
   shrub: 75,
   wreath: 100,
   window: 50,
+  // Garland, per linear foot: (material + 1 hr of labour per 100 ft) x 1.48.
+  // Material: commercial pre-lit LED garland, about $100 per 9 ft length.
+  // Labour: $27/hr, the US average for holiday light installers.
+  garlandCostPerFoot: 100 / 9,
+  garlandLaborRate: 27,
+  garlandLaborHoursPer100: 1,
+  garlandMarkup: 0.48,
   rushUplift: 0.3, // install inside 5 days
   offers: {
     single: { label: 'Single Install', factor: 1.2, note: 'Installed once; the lights are yours to keep.' },
@@ -21,3 +27,8 @@ export const pricing = {
   rangeLow: 0.92,
   rangeHigh: 1.12,
 } as const;
+
+// $16.84 per foot with the figures above.
+export const garlandPerFoot =
+  (pricing.garlandCostPerFoot + (pricing.garlandLaborRate * pricing.garlandLaborHoursPer100) / 100) * (1 + pricing.garlandMarkup);
+

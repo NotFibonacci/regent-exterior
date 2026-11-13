@@ -487,6 +487,17 @@ body.page main { position: relative; z-index: 1; pointer-events: auto; }
 .est-block { padding: 22px 20px !important; border: 1px solid var(--line) !important; background: var(--slate); }
 .est-block legend { float: left; width: 100%; font-family: var(--caps); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); margin-bottom: 6px; }
 .radios { display: grid; gap: 10px; }
+.est-block { display: grid; gap: 14px; align-content: start; }
+.addon { border-top: 1px solid var(--line); padding-top: 12px; }
+.addon-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; background: none; border: 0; padding: 4px 0; color: var(--cream); font: inherit; font-size: 15px; cursor: pointer; }
+.addon-toggle span { font-size: 22px; line-height: 1; color: var(--brass); width: 22px; text-align: center; }
+.addon-toggle:hover span, .addon-toggle[aria-expanded='true'] span { color: var(--lamp); }
+.addon-toggle:focus-visible { outline: 1px solid var(--lamp); outline-offset: 4px; }
+.addon-panel { display: grid; gap: 12px; padding: 12px 0 4px; }
+.addon-panel[hidden] { display: none; }
+.addon-item { display: grid; grid-template-columns: 1fr 96px; gap: 10px; align-items: center; }
+.form .addon-item select { padding: 8px 10px; }
+.form .addon-item select:disabled { opacity: 0.35; }
 .radios small { color: var(--stone); font-size: 13px; }
 @media (max-width: 1000px) { .est-grid { grid-template-columns: 1fr; } }
 .est-result {
