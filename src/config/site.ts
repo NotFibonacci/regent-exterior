@@ -16,7 +16,7 @@ export const nav = [
   { href: '/holiday-lighting/', label: 'Holiday' },
   { href: '/windows/', label: 'Windows' },
   { href: '/gutters/', label: 'Gutters' },
-  { href: '/siding/', label: 'Siding' },
+  { href: '/siding-and-stone/', label: 'Siding & Stone' },
   { href: '/doors/', label: 'Doors' },
   { href: '/service-areas/', label: 'Areas' },
   { href: '/about/', label: 'About' },

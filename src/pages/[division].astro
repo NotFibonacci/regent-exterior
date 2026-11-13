@@ -3,6 +3,8 @@ import Base from '../layouts/Base.astro';
 import PageHero from '../components/PageHero.astro';
 import Faq from '../components/Faq.astro';
 import LeadForm from '../components/LeadForm.astro';
+import Gallery from '../components/Gallery.astro';
+import Swatches from '../components/Swatches.astro';
 import { divisions, type Division } from '../data/divisions';
 import { counties } from '../data/counties';
 
@@ -10,7 +12,7 @@ export function getStaticPaths() {
   return divisions.map((d) => ({ params: { division: d.slug }, props: { d } }));
 }
 const { d } = Astro.props as { d: Division };
-const interest = { windows: 'Windows', gutters: 'Gutters', siding: 'Siding', doors: 'Doors' }[d.slug] ?? '';
+const interest = { windows: 'Windows', gutters: 'Gutters', 'siding-and-stone': 'Siding and stone', doors: 'Doors' }[d.slug] ?? '';
 const schema = [
   { '@context': 'https://schema.org', '@type': 'Service', serviceType: d.title, provider: { '@id': new URL('/#business', Astro.site).href }, areaServed: counties.map((c) => `${c.name}, Maryland`) },
   { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: d.faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
@@ -19,7 +21,7 @@ const schema = [
 ---
 <Base title={`${d.title} | Regent ${d.brand}`} description={d.description} image={d.image} schema={schema}>
   <main id="content">
-    <PageHero label={`Regent ${d.brand}`} title={d.h1} lede={d.lede} image={d.image} alt={d.imageAlt} />
+    <PageHero label={`Regent ${d.brand}`} title={d.h1} lede={d.lede} image={d.image} alt={d.imageAlt} aspect={d.heroAspect} position={d.heroPosition} />
 
     <section class="section">
       <div class="sec-head"><p class="label">What we do</p><h2>{d.brand.replace('Exterior ', '')}, handled by specialists.</h2></div>
@@ -27,6 +29,10 @@ const schema = [
         {d.services.map((s) => <article class="card"><h3>{s.name}</h3><p>{s.text}</p></article>)}
       </div>
     </section>
+
+    {d.swatchSets?.map((set) => <Swatches {...set} />)}
+
+    {d.gallery && <Gallery title={d.galleryTitle ?? 'In detail.'} photos={d.gallery} />}
 
     <section class="section split">
       <div class="sec-head"><p class="label">How we work</p><h2>Measured, written down, <em>done once.</em></h2></div>

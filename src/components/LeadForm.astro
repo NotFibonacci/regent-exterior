@@ -2,7 +2,7 @@
 import { site } from '../config/site';
 interface Props { title?: string; lede?: string; interest?: string; id?: string }
 const { title = 'Request a <em>design visit.</em>', lede = 'Tell us about the house. We come out, see it in person, and give you a written plan and price.', interest = '', id = 'request' } = Astro.props;
-const services = ['Architectural and landscape lighting', 'Holiday lighting', 'Windows', 'Gutters', 'Siding', 'Doors'];
+const services = ['Architectural and landscape lighting', 'Holiday lighting', 'Windows', 'Gutters', 'Siding and stone', 'Doors'];
 ---
 <section class="lead" id={id}>
   <div class="lead-inner">

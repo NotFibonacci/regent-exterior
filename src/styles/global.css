@@ -540,3 +540,27 @@ body.page .reveal > * { opacity: 1; transform: none; }
 .e-break li span:last-child { color: var(--cream); text-align: right; }
 .energy-out .fine { grid-column: 1 / -1; font-size: 12px; color: var(--stone); }
 @media (max-width: 900px) { .energy-grid { grid-template-columns: 1fr; } }
+
+/* ---- Gallery and material swatches ------------------------------------ */
+.gal-grid { display: grid; gap: clamp(14px, 2vw, 24px); grid-template-columns: 1fr; align-items: start; }
+.gal-grid.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.gal-grid.n3 { grid-template-columns: 1.35fr 1fr; }
+.gal-grid.n3 .gal-item:first-child { grid-row: span 2; }
+.gal-grid.n1 .gal-item { max-width: 980px; }
+.gal-item { margin: 0; border: 1px solid rgba(200, 146, 42, 0.35); padding: 8px; }
+.gal-item img { display: block; width: 100%; height: auto; aspect-ratio: var(--ar); object-fit: cover; }
+.gal-grid.n3 { align-items: stretch; }
+.gal-grid.n3 .gal-item:first-child { display: flex; flex-direction: column; }
+.gal-grid.n3 .gal-item:first-child img { aspect-ratio: auto; flex: 1; min-height: 0; }
+.gal-item figcaption { padding: 12px 4px 4px; color: var(--stone); font-size: 0.92rem; line-height: 1.5; }
+.gal-note { margin-top: 16px; }
+@media (max-width: 760px) { .gal-grid.n2, .gal-grid.n3 { grid-template-columns: 1fr; } .gal-grid.n3 .gal-item:first-child { grid-row: auto; } }
+
+.sw-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(16px, 2vw, 28px); grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+@media (max-width: 640px) { .sw-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 14px; } }
+.sw h3 { margin: 14px 0 6px; font-size: 1.05rem; }
+.sw p { margin: 0; color: var(--stone); font-size: 0.92rem; line-height: 1.5; }
+.sw-tile { aspect-ratio: 1; overflow: hidden; border: 1px solid rgba(200, 146, 42, 0.35); padding: 6px; }
+.sw-tile img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1); }
+.sw:hover .sw-tile img { transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) { .sw-tile img { transition: none; } .sw:hover .sw-tile img { transform: none; } }

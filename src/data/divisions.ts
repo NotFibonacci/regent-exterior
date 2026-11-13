@@ -10,7 +10,14 @@ export type Division = {
   approach: string[];
   faqs: { q: string; a: string }[];
   description: string;
+  heroAspect?: string; // CSS aspect-ratio for the hero photo (default 4 / 3)
+  heroPosition?: string; // CSS object-position for the hero crop
+  gallery?: Photo[];
+  galleryTitle?: string;
+  swatchSets?: { id: string; label: string; title: string; body: string; items: { src: string; name: string; text: string }[] }[];
 };
+
+export type Photo = { src: string; alt: string; caption: string; w: number; h: number };
 
 export const divisions: Division[] = [
   {
@@ -19,8 +26,13 @@ export const divisions: Division[] = [
     title: 'Window replacement in Central Maryland',
     h1: 'Windows, <em>fitted to the house.</em>',
     lede: 'Replacement windows sized to the openings you have, with trim and sills finished to match the rest of the house.',
-    image: '/img/windows.webp',
-    imageAlt: 'Double-hung windows with white trim on grey lap siding and stone',
+    image: '/img/windows-gable.webp',
+    imageAlt: 'Two-storey black-framed window wall set into a greige siding gable under a blue sky',
+    heroAspect: '900 / 1074',
+    galleryTitle: 'Light, <em>let in.</em>',
+    gallery: [
+      { src: '/img/windows-interior.webp', alt: 'Double-height living room with tall grid windows and French doors filling the room with low sun', caption: 'Tall grid windows and French doors: the reason the room is built around them.', w: 596, h: 384 },
+    ],
     description: 'Window replacement for Central Maryland homes: double-hung, casement and picture windows, measured to the opening and trimmed to match. MHIC #41139.',
     services: [
       { name: 'Double-hung and casement', text: 'Like-for-like replacement that keeps the sightlines and grille pattern of the original windows.' },
@@ -46,8 +58,14 @@ export const divisions: Division[] = [
     title: 'Gutter installation and replacement in Central Maryland',
     h1: 'Gutters that <em>carry the water away.</em>',
     lede: 'Seamless gutters and downspouts sized for your roof, pitched correctly and discharged where water can do no harm.',
-    image: '/img/gutters.webp',
-    imageAlt: 'White gutters and downspouts on a steep slate-grey roof and grey siding',
+    image: '/img/gutters-dark.webp',
+    imageAlt: 'Charcoal seamless gutter and downspout under a dark soffit on a modern house with cedar cladding',
+    heroPosition: '62% 50%',
+    galleryTitle: 'Finished to <em>match the trim.</em>',
+    gallery: [
+      { src: '/img/gutters-white.webp', alt: 'White seamless gutter and downspout under a white soffit against red brick', caption: 'White on brick: gutter, downspout and soffit in one colour so the roofline reads clean.', w: 1040, h: 586 },
+      { src: '/img/gutters-dark.webp', alt: 'Charcoal gutters and downspout on a modern house with cedar cladding', caption: 'Charcoal on a modern facade: the gutter runs as a line, not an afterthought.', w: 1384, h: 602 },
+    ],
     description: 'Seamless gutter and downspout installation for Central Maryland homes, sized to the roof and pitched to drain. Gutter guards and repairs. MHIC #41139.',
     services: [
       { name: 'Seamless gutters', text: 'Formed on site to the length of each run, with no seams along the face to leak.' },
@@ -68,30 +86,52 @@ export const divisions: Division[] = [
     ],
   },
   {
-    slug: 'siding',
-    brand: 'Exterior Siding',
-    title: 'Siding installation and replacement in Central Maryland',
-    h1: 'Siding, <em>straight and true.</em>',
-    lede: 'Lap siding, shakes and trim installed with even exposures, tight corners and clean transitions to stone and brick.',
-    image: '/img/siding.webp',
-    imageAlt: 'Grey lap siding on a gable with a white-trimmed window',
-    description: 'Siding installation and replacement for Central Maryland homes: lap siding, shakes, trim and wraps, with clean transitions to stone and brick. MHIC #41139.',
+    slug: 'siding-and-stone',
+    brand: 'Exterior Siding & Stone',
+    title: 'Siding and stone veneer installation in Central Maryland',
+    h1: 'Siding and stone, <em>straight and true.</em>',
+    lede: 'Lap siding, shakes, board and batten and stone veneer, installed with even courses, tight corners and clean transitions from one material to the next.',
+    image: '/img/siding-house.webp',
+    imageAlt: 'Two-storey house in grey lap siding with white trim, a covered patio and a dormer',
+    description: 'Siding and stone veneer for Central Maryland homes: lap siding, shakes, board and batten, ledgestone and fieldstone facades, with flashed transitions. MHIC #41139.',
     services: [
-      { name: 'Lap siding', text: 'Fibre cement and vinyl lap siding, run level with even exposures from course to course.' },
-      { name: 'Shakes and accents', text: 'Shingle and board-and-batten accents for gables and dormers.' },
-      { name: 'Trim and wraps', text: 'Corner boards, window and door trim, and fascia wrapped to match.' },
-      { name: 'Repairs', text: 'Storm and impact damage repaired with matched profiles and colours.' },
+      { name: 'Lap siding', text: 'Fibre cement and vinyl lap siding, from narrow clapboard to Dutch lap, run level with even exposures.' },
+      { name: 'Shakes and board and batten', text: 'Shingle and vertical board-and-batten for gables, dormers and whole elevations.' },
+      { name: 'Stone veneer', text: 'Ledgestone, fieldstone and flagstone facades, water tables and wainscots, set over a proper drainage plane.' },
+      { name: 'Trim, wraps and repairs', text: 'Corner boards, window and door trim and fascia wrapped to match; storm damage repaired with matched profiles.' },
     ],
     approach: [
-      'The wall is inspected and house wrap repaired before any siding goes on.',
+      'The wall is inspected and house wrap repaired before any siding or stone goes on.',
       'Courses are laid out so they line up across windows and around corners.',
-      'Transitions to stone, brick and roofline are flashed, not just caulked.',
-      'Work areas are cleaned daily and the property is walked with you at the end.',
+      'Stone gets a drainage mat and weep screed at the base, so water can always get out.',
+      'Transitions between stone, siding and roofline are flashed, not just caulked.',
+    ],
+    swatchSets: [
+      { id: 'siding-styles', label: 'Siding profiles', title: 'Choose the <em>line.</em>', body: 'Each profile changes how a wall reads from the street: tighter courses look more traditional, wider and vertical ones more modern.', items: [
+        { src: '/img/siding-clapboard.webp', name: 'Narrow clapboard', text: 'Tight, traditional courses. Suits colonials and older homes.' },
+        { src: '/img/siding-dutch.webp', name: 'Dutch lap', text: 'A scooped face that throws a deeper shadow line.' },
+        { src: '/img/siding-shake.webp', name: 'Shingle and shake', text: 'Straight-edge shingles for gables, dormers and coastal styles.' },
+        { src: '/img/siding-batten.webp', name: 'Board and batten', text: 'Vertical lines for farmhouse and modern elevations.' },
+        { src: '/img/siding-plank.webp', name: 'Wood-tone plank', text: 'Warm, wide planks as an accent on entries and modern facades.' },
+      ] },
+      { id: 'stone-facades', label: 'Stone facades', title: 'Stone, <em>laid by hand.</em>', body: 'Stone veneer across a whole front, or as a base course and wainscot below siding. Pattern and colour are chosen against your brick, roof and trim.', items: [
+        { src: '/img/stone-ledge-grey.webp', name: 'Ledgestone, grey', text: 'Thin stacked strips with crisp shadows. Clean and contemporary.' },
+        { src: '/img/stone-ledge-earth.webp', name: 'Ledgestone, earth', text: 'The same stacked pattern in warm tans and browns.' },
+        { src: '/img/stone-stacked-white.webp', name: 'Stacked stone, white', text: 'Bright, textured and modern, beautiful under uplighting.' },
+        { src: '/img/stone-fieldstone.webp', name: 'Fieldstone', text: 'Rounded, varied stones. The classic Maryland country look.' },
+        { src: '/img/stone-drystack.webp', name: 'Drystack', text: 'Rough, deep-set stone with almost no visible mortar.' },
+        { src: '/img/stone-flagstone.webp', name: 'Mosaic flagstone', text: 'Irregular flat stones fitted like a puzzle, with soft mortar joints.' },
+      ] },
+    ],
+    galleryTitle: 'What a new facade <em>changes.</em>',
+    gallery: [
+      { src: '/img/siding-before-after.webp', alt: 'One window shown half with new pale green lap siding and half with old peeling painted boards', caption: 'Before and after, on one wall: new lap siding and trim beside the worn boards it replaces.', w: 674, h: 462 },
     ],
     faqs: [
       { q: 'Fibre cement or vinyl?', a: 'Fibre cement holds a crisp line and takes paint; vinyl needs less upkeep. We walk you through both against your house and budget.' },
+      { q: 'Can stone veneer go on a house that has siding now?', a: 'Yes. We remove the siding where the stone will go, add the drainage layers and lath stone needs, and flash the line where stone meets siding so water stays out.' },
       { q: 'Can you replace only part of the siding?', a: 'Often, yes, if the profile and colour can be matched. We tell you honestly when a full side will look better than a patch.' },
-      { q: 'How long does a whole house take?', a: 'It depends on size and detail, but most homes take one to two weeks once materials are on site. You get the schedule in writing.' },
+      { q: 'How long does a whole house take?', a: 'It depends on size, detail and how much stone is involved, but most homes take one to three weeks once materials are on site. You get the schedule in writing.' },
     ],
   },
   {

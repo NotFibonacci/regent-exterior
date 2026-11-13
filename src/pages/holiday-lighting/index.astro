@@ -2,6 +2,7 @@
 import Base from '../../layouts/Base.astro';
 import PageHero from '../../components/PageHero.astro';
 import Faq from '../../components/Faq.astro';
+import Gallery from '../../components/Gallery.astro';
 import { pricing } from '../../config/pricing';
 import { site } from '../../config/site';
 import { counties } from '../../data/counties';
@@ -19,9 +20,9 @@ const schema = [
 ];
 const o = pricing.offers;
 ---
-<Base title="Holiday and Christmas light installation in Central Maryland | Regent Exterior Lighting" description={`Professional holiday lighting for Central Maryland homes: designed, installed, maintained and taken down. Instant estimate online. From $${site.holidayMinimum}. MHIC #41139.`} image="/img/holiday-full.webp" schema={schema}>
+<Base title="Holiday and Christmas light installation in Central Maryland | Regent Exterior Lighting" description={`Professional holiday lighting for Central Maryland homes: designed, installed, maintained and taken down. Instant estimate online. From $${site.holidayMinimum}. MHIC #41139.`} image="/img/holiday-porch.webp" schema={schema}>
   <main id="content">
-    <PageHero label="Regent Holiday Lighting" title="And for <em>December.</em>" lede="Rooflines outlined straight and true, shrubs and trees dressed, all installed, maintained through the season and taken down after it." image="/img/holiday-full.webp" alt="Stone and siding colonial at night with warm white lights along every roofline and on the shrubs" cta={{ href: '#estimate', text: 'Get an instant estimate' }} />
+    <PageHero label="Regent Holiday Lighting" title="And for <em>December.</em>" lede="Rooflines outlined straight and true, shrubs and trees dressed, all installed, maintained through the season and taken down after it." image="/img/holiday-porch.webp" alt="Covered porch at night with warm white lights on the roofline, wrapped columns, garland with red bows and lit shrubs" aspect="1337 / 1176" cta={{ href: '#estimate', text: 'Get an instant estimate' }} />
 
     <section class="section">
       <div class="sec-head"><p class="label">Three ways to have it</p><h2>Choose <em>how you want the season.</em></h2></div>
@@ -31,6 +32,12 @@ const o = pricing.offers;
         <article class="card"><h3>{o.annual.label}</h3><p>{o.annual.note} The same service every year without asking.</p></article>
       </div>
     </section>
+
+    <Gallery label="The look" title="Warm, even, <em>all season.</em>" note="Photos and renderings show styles we install." photos={[
+      { src: '/img/holiday-moonlit.webp', alt: 'Two-storey house under a full moon with icicle lights along the porch eave and every shrub wrapped in warm white', caption: 'Icicle lights along the eave and every shrub wrapped to match.', w: 906, h: 670 },
+      { src: '/img/holiday-full.webp', alt: 'Stone and siding colonial at night with warm white lights along every roofline and on the shrubs', caption: 'Rooflines traced in C9 bulbs. Try it on our sample home on the front page.', w: 1400, h: 1050 },
+      { src: '/img/holiday-bokeh.webp', alt: 'Out-of-focus multicolour holiday light displays on trees and frames at night', caption: 'Multicolour, blue and white or red and green: your palette, set at the design visit.', w: 596, h: 400 },
+    ]} />
 
     <section class="section estimator" id="estimate">
       <div class="sec-head"><p class="label">Instant estimate</p><h2>Your price, <em>in a minute.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you.</p></div>

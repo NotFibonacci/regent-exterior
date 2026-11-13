@@ -30,7 +30,7 @@ const business: Record<string, unknown> = {
   email: site.email,
   image: new URL('/img/lighting-full.webp', Astro.site).href,
   logo: new URL('/regent-exterior-services.webp', Astro.site).href,
-  description: 'Architectural, landscape and holiday lighting, with windows, gutters, siding and doors, for homes in Central Maryland.',
+  description: 'Architectural, landscape and holiday lighting, with windows, gutters, siding, stone and doors, for homes in Central Maryland.',
   areaServed: site.counties.map((c) => ({ '@type': 'AdministrativeArea', name: `${c} County, Maryland` })),
   hasCredential: { '@type': 'EducationalOccupationalCredential', credentialCategory: 'license', name: `Maryland Home Improvement Commission license ${site.licenseNumber}` },
 };
@@ -99,7 +99,7 @@ if (site.address) business.address = site.address;
       <div class="inner">
         <div class="col brandcol">
           <img src="/regent-exterior-services.webp" alt={site.name} width="900" height="333" loading="lazy" />
-          <p>Exterior lighting, windows, gutters, siding and doors for homes in Central Maryland.</p>
+          <p>Exterior lighting, windows, gutters, siding, stone and doors for homes in Central Maryland.</p>
           <p class="license">Licensed in Maryland · {site.license}</p>
           <p><a href={`mailto:${site.email}`}>{site.email}</a>{site.phone && <><br /><a href={`tel:${site.phone.replace(/[^0-9+]/g, '')}`}>{site.phone}</a></>}</p>
           {site.address && <p>{site.address}</p>}
@@ -111,7 +111,7 @@ if (site.address) business.address = site.address;
             <li><a href="/holiday-lighting/">Holiday lighting</a></li>
             <li><a href="/windows/">Windows</a></li>
             <li><a href="/gutters/">Gutters</a></li>
-            <li><a href="/siding/">Siding</a></li>
+            <li><a href="/siding-and-stone/">Siding &amp; Stone</a></li>
             <li><a href="/doors/">Doors</a></li>
           </ul>
         </div>

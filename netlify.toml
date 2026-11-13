@@ -7,6 +7,11 @@
   # Set SITE_URL to the live domain (e.g. https://regentexteriorservices.com)
   # in Netlify's environment settings so canonical links and the sitemap use it.
 
+[[redirects]]
+  from = "/siding/"
+  to = "/siding-and-stone/"
+  status = 301
+
 [[headers]]
   for = "/_astro/*"
   [headers.values]

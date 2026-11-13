@@ -1,0 +1,16 @@
+---
+interface Props { id: string; label: string; title: string; body: string; items: { src: string; name: string; text: string }[] }
+const { id, label, title, body, items } = Astro.props;
+---
+<section class="section materials" id={id}>
+  <div class="sec-head reveal"><p class="label" style="--i:0">{label}</p><h2 style="--i:1" set:html={title} /><p class="body" style="--i:2">{body}</p></div>
+  <ul class="sw-grid" role="list">
+    {items.map((it, i) => (
+      <li class="sw reveal" style={`--i:${i % 6}`}>
+        <div class="sw-tile"><img src={it.src} alt={`${it.name} texture sample`} loading="lazy" decoding="async" width="600" height="600" /></div>
+        <h3>{it.name}</h3>
+        <p>{it.text}</p>
+      </li>
+    ))}
+  </ul>
+</section>
