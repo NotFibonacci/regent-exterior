@@ -113,9 +113,18 @@ void main() {
     // A part of a layer shows once the chosen tier reaches its own tier.
     vec4 need = texture2D(tTier, t) * 3.0;
     vec4 on = min(uOn, vec4(1.0)) * clamp(uTier - need + 1.0, 0.0, 1.0);
-    vec3 lit = max(max(lp.rgb * on.x, ls.rgb * on.y), max(le.rgb * on.z, lh.rgb * on.w));
-    float w = max(max(lp.a * on.x, ls.a * on.y), max(le.a * on.z, lh.a * on.w));
-    nightCol = mix(base, lit, w) * (1.0 + 0.08 * max(max(uOn.x, uOn.y), max(uOn.z, uOn.w)) * w - 0.08 * w);
+    // Each layer adds its own light (its mockup minus the base, inside its
+    // mask). The strongest addition wins per pixel, so switching on another
+    // layer can never dim one that is already on. Layers that are off sit
+    // at -1 so they never win.
+    vec4 wk = vec4(lp.a, ls.a, le.a, lh.a) * on;
+    vec4 live = step(0.0005, wk);
+    vec3 cp = (lp.rgb - base) * wk.x - (1.0 - live.x);
+    vec3 cs = (ls.rgb - base) * wk.y - (1.0 - live.y);
+    vec3 ce = (le.rgb - base) * wk.z - (1.0 - live.z);
+    vec3 ch = (lh.rgb - base) * wk.w - (1.0 - live.w);
+    float w = max(max(wk.x, wk.y), max(wk.z, wk.w));
+    nightCol = base + (w > 0.0005 ? max(max(cp, cs), max(ce, ch)) : vec3(0.0));
     // With holiday lights on, the rest of the night drops a little darker so
     // the bulbs carry the picture, as they do to the eye.
     nightCol *= mix(1.0, 0.72, on.w * (1.0 - lh.a * on.w));

@@ -115,7 +115,7 @@ const LAYERS = [
       var holiday = function (detail) { window.dispatchEvent(new CustomEvent('regent:holiday', { detail: detail })); };
       var describe = function (name) {
         var t = TIERS[name][tier[name] - 1];
-        return 'Tier ' + tier[name] + ': ' + t + (name === 'holiday' ? ' Installed, maintained and taken down. From $' + minimum + '.' : '');
+        return 'Tier ' + tier[name] + ': ' + t + (name === 'holiday' ? ' Installed, maintained and taken down.' : '');
       };
 
       var summary = function () {
