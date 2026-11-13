@@ -110,6 +110,16 @@ ground=np.zeros((H,W),np.float32)
 cv2.fillPoly(ground,[np.array([(560,905),(700,890),(1448,880),(1448,1086),(560,1086)],np.int32)],1)
 for (x0,y0,x1,y1) in [(608,832,652,898),(664,846,708,908),(1026,866,1072,952),(1052,884,1074,910)]: cv2.rectangle(ground,(x0,y0),(x1,y1),1,-1)
 masks['stone']*=1-cv2.GaussianBlur(ground,(0,0),5)
+# Each mockup draws the windows a few pixels off from the others, so a layer
+# would lay its own frame and grid over the base's. Inside the windows every
+# layer uses the soffit mockup's window (the one in the base) and keeps only
+# its own lighting, as a smooth ratio.
+WINDOWS=[(870,560,990,735),(880,835,970,900),(1262,562,1322,725)]
+for k in ['path','stone','holiday']:
+    gain=np.clip(cv2.GaussianBlur(L[k],(0,0),10)/(cv2.GaussianBlur(L['eave'],(0,0),10)+0.002),0.4,4.0)
+    for (x0,y0,x1,y1) in WINDOWS:
+        a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0-6,y0-6),(x1+6,y1+6),1,-1); a=cv2.GaussianBlur(a,(0,0),3)[...,None]
+        L[k]=L[k]*(1-a)+L['eave']*gain*a
 for k in L:
     w=masks[k]
     layers[k]=np.clip(L[k]-mn,0,None)*w[...,None]
