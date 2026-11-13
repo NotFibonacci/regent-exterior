@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import PageHero from '../../components/PageHero.astro';
 import Faq from '../../components/Faq.astro';
 import Gallery from '../../components/Gallery.astro';
-import { pricing, garlandPerFoot } from '../../config/pricing';
+import { pricing } from '../../config/pricing';
 import { site } from '../../config/site';
 import { counties } from '../../data/counties';
 
@@ -57,6 +57,7 @@ const addons = [
         <input type="hidden" name="form-name" value="holiday-quote" />
         <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
         <input type="hidden" name="estimate" data-est-field />
+        <input type="hidden" name="crew_plan" data-est-crew />
         <div class="est-grid">
           <fieldset class="est-block">
             <legend>Your home</legend>
@@ -125,45 +126,47 @@ const addons = [
     <Faq faqs={faqs} />
   </main>
 
-  <script is:inline define:vars={{ P: pricing, G: garlandPerFoot }}>
-    (function () {
-      var f = document.querySelector('[data-estimator]');
-      if (!f) return;
-      var get = function (k) { var el = f.querySelector('[data-k="' + k + '"]'); if (!el || el.disabled) return 0; return el.type === 'checkbox' ? el.checked : Number(el.value) || 0; };
-      f.querySelectorAll('[data-addon-toggle]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          var open = b.getAttribute('aria-expanded') !== 'true', p = document.getElementById(b.getAttribute('aria-controls'));
-          b.setAttribute('aria-expanded', open); p.hidden = !open; b.querySelector('span').textContent = open ? '\u2212' : '+';
+  <script>
+    import { estimate, type OfferKey } from '../../config/estimate';
+    import { pricing } from '../../config/pricing';
+    const f = document.querySelector<HTMLFormElement>('[data-estimator]');
+    if (f) {
+      const el = (k: string) => f.querySelector<HTMLInputElement | HTMLSelectElement>(`[data-k="${k}"]`);
+      const num = (k: string) => { const e = el(k); return !e || e.disabled ? 0 : Number(e.value) || 0; };
+      const on = (k: string) => { const e = el(k) as HTMLInputElement | null; return !!e && !e.disabled && e.checked; };
+      const fmt = (n: number) => '$' + (Math.round(n / 10) * 10).toLocaleString('en-US');
+      const out = f.querySelector('[data-est-price]')!, note = f.querySelector('[data-est-note]')!;
+      const field = f.querySelector<HTMLInputElement>('[data-est-field]')!, crewField = f.querySelector<HTMLInputElement>('[data-est-crew]')!;
+      f.querySelectorAll<HTMLButtonElement>('[data-addon-toggle]').forEach((b) => b.addEventListener('click', () => {
+        const open = b.getAttribute('aria-expanded') !== 'true';
+        b.setAttribute('aria-expanded', String(open));
+        document.getElementById(b.getAttribute('aria-controls')!)!.hidden = !open;
+        b.querySelector('span')!.textContent = open ? '\u2212' : '+';
+      }));
+      f.querySelectorAll<HTMLInputElement>('[data-on]').forEach((c) => c.addEventListener('change', () => {
+        const s = el(c.dataset.on!)!; s.disabled = !c.checked; if (c.checked) s.focus();
+      }));
+      const calc = () => {
+        const offer = (f.querySelector<HTMLInputElement>('[data-offer]:checked')!.dataset.offer) as OfferKey;
+        const e = estimate({
+          roofline: num('roof'), stories: num('stories'), steep: on('steep'),
+          treesSmall: num('ts'), treesMedium: num('tm'), shrubs: num('sh'),
+          wreaths: num('wr'), windows: num('wi'), garland: num('ga'), offer, rush: on('rush'),
         });
-      });
-      f.querySelectorAll('[data-on]').forEach(function (c) {
-        c.addEventListener('change', function () { var s = f.querySelector('[data-k="' + c.dataset.on + '"]'); s.disabled = !c.checked; if (c.checked) s.focus(); });
-      });
-      var fmt = function (n) { return '$' + (Math.round(n / 10) * 10).toLocaleString('en-US'); };
-      var out = f.querySelector('[data-est-price]'), note = f.querySelector('[data-est-note]'), field = f.querySelector('[data-est-field]');
-      var calc = function () {
-        var offer = f.querySelector('[data-offer]:checked').dataset.offer;
-        var roof = get('roof');
-        var up = Math.max(P.storyUplift[get('stories')] || 0, get('steep') ? P.steepUplift : 0);
-        var total = roof * P.rooflinePerFoot * (1 + up);
-        total += get('ts') * P.treeSmall + get('tm') * P.treeMedium + get('sh') * P.shrub + get('wr') * P.wreath + get('wi') * P.window + get('ga') * G;
-        total *= P.offers[offer].factor;
-        if (get('rush')) total *= 1 + P.rushUplift;
-        var lo = Math.max(P.minimum, total * P.rangeLow), hi = Math.max(P.minimum, total * P.rangeHigh);
-        if (get('measure')) {
+        crewField.value = e.summary;
+        if (on('measure')) {
           out.textContent = 'We will measure';
-          note.textContent = 'We will measure the roofline on site and send your price. Installations start at ' + fmt(P.minimum) + '.';
+          note.textContent = `We will measure the roofline on site and send your price. Installations start at ${fmt(pricing.minimum)}.`;
           field.value = 'Measure on site';
-        } else {
-          out.textContent = lo === hi ? fmt(lo) : fmt(lo) + ' to ' + fmt(hi);
-          var extra = get('tl') ? ' Large trees are added after we see them.' : '';
-          note.textContent = (offer === 'annual' ? 'Per year, held for three years. ' : '') + 'Confirmed on site before install.' + extra;
-          field.value = out.textContent + ' (' + P.offers[offer].label + ')';
+          return;
         }
+        out.textContent = Math.round(e.lo) === Math.round(e.hi) ? fmt(e.lo) : `${fmt(e.lo)} to ${fmt(e.hi)}`;
+        note.textContent = (offer === 'annual' ? 'Per year, held for three years. ' : '') + 'Confirmed on site before install.' + (on('tl') ? ' Large trees are added after we see them.' : '');
+        field.value = `${out.textContent} (${pricing.offers[offer].label})`;
       };
       f.addEventListener('input', calc);
       f.addEventListener('change', calc);
       calc();
-    })();
+    }
   </script>
 </Base>
