@@ -44,6 +44,8 @@ uniform sampler2D tPath;
 uniform sampler2D tStone;
 uniform sampler2D tEave;
 uniform sampler2D tHol;
+uniform sampler2D tTier;  // per layer: lowest tier at which each pixel lights (1-3)
+uniform vec4 uTier;       // chosen tier per layer, animated between whole numbers
 uniform sampler2D tMap;   // r: bulb colour index, g: nearness to a bulb, b: snow cover, a: not-sky
 uniform vec2 uC;
 uniform float uZ;
@@ -108,7 +110,9 @@ void main() {
       glow = mix(mix(vec3(l), avg * l * 1.3, 0.45), own * l * 2.2 + vec3(1.0) * smoothstep(0.55, 1.0, l) * 0.5, map.g * map.g);
       lh.rgb = min(lh.rgb, base) + glow;
     }
-    vec4 on = min(uOn, vec4(1.0));
+    // A part of a layer shows once the chosen tier reaches its own tier.
+    vec4 need = texture2D(tTier, t) * 3.0;
+    vec4 on = min(uOn, vec4(1.0)) * clamp(uTier - need + 1.0, 0.0, 1.0);
     vec3 lit = max(max(lp.rgb * on.x, ls.rgb * on.y), max(le.rgb * on.z, lh.rgb * on.w));
     float w = max(max(lp.a * on.x, ls.a * on.y), max(le.a * on.z, lh.a * on.w));
     nightCol = mix(base, lit, w) * (1.0 + 0.08 * max(max(uOn.x, uOn.y), max(uOn.z, uOn.w)) * w - 0.08 * w);
@@ -209,10 +213,11 @@ export default function PhotoStage() {
     const tex = () => ({ value: null as THREE.Texture | null });
     const uniforms = {
       ...view,
-      tDay: tex(), tSky: tex(), tDraw: tex(), tBase: tex(), tReal: tex(), tPath: tex(), tStone: tex(), tEave: tex(), tHol: tex(), tMap: tex(),
+      tDay: tex(), tSky: tex(), tDraw: tex(), tBase: tex(), tReal: tex(), tPath: tex(), tStone: tex(), tEave: tex(), tHol: tex(), tMap: tex(), tTier: tex(),
       uMix: { value: 0 },
       uIntro: { value: 1 },
       uOn: { value: new THREE.Vector4() },
+      uTier: { value: new THREE.Vector4(3, 3, 3, 3) },
       uSnow: { value: 0 },
       uPal: { value: Array.from({ length: 4 }, () => new THREE.Vector3(1, 1, 1)) },
       uPalN: { value: 0 },
@@ -238,6 +243,16 @@ export default function PhotoStage() {
     flakes.frustumCulled = false;
     scene.add(flakes);
 
+    // Tier per layer, eased so lights come and go rather than snap.
+    const tierOrder = ['path', 'stone', 'eaves', 'holiday'];
+    const onTier = (ev: Event) => {
+      const d = (ev as CustomEvent).detail ?? {};
+      const i = tierOrder.indexOf(d.layer);
+      if (i < 0) return;
+      const tgt = { v: uniforms.uTier.value.getComponent(i) };
+      gsap.to(tgt, { v: Number(d.tier), duration: state.reduced ? 0 : 0.9, ease: 'power2.out', onUpdate: () => uniforms.uTier.value.setComponent(i, tgt.v) });
+    };
+    window.addEventListener('regent:tier', onTier);
     const choice = { snow: true };
     const onChoice = (ev: Event) => {
       const d = (ev as CustomEvent).detail ?? {};
@@ -355,10 +370,11 @@ export default function PhotoStage() {
       load('home2/light-eave.webp', true),
       load('home2/light-holiday.webp', true),
       load('home2/holiday-map.png', false, true),
+      load('home2/tier-map.png', false),
     ])
       .then((t) => {
         if (!alive) return;
-        const keys = ['tDay', 'tSky', 'tDraw', 'tBase', 'tReal', 'tPath', 'tStone', 'tEave', 'tHol', 'tMap'] as const;
+        const keys = ['tDay', 'tSky', 'tDraw', 'tBase', 'tReal', 'tPath', 'tStone', 'tEave', 'tHol', 'tMap', 'tTier'] as const;
         keys.forEach((k, i) => (uniforms[k].value = t[i]));
         raf = requestAnimationFrame(frame);
         window.dispatchEvent(new Event('regent:ready'));
@@ -376,6 +392,7 @@ export default function PhotoStage() {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', move);
       window.removeEventListener('regent:holiday', onChoice);
+      window.removeEventListener('regent:tier', onTier);
       gsap.killTweensOf(uniforms.uIntro);
       stop();
       renderer.dispose();

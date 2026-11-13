@@ -35,11 +35,12 @@ base=R*grade
 x0,y0,x1,y1=1096,816,1158,920; sx=64
 a=np.zeros((y1-y0,x1-x0),np.float32); a[6:-6,6:-6]=1; a=cv2.GaussianBlur(a,(0,0),3)[...,None]
 base[y0:y1,x0:x1]=base[y0:y1,x0-sx:x1-sx]*a+base[y0:y1,x0:x1]*(1-a)
-# The photo has lights on in two rooms; the mockups do not. Dim the glass.
-for (x0,y0,x1,y1) in [(884,574,976,722),(888,842,962,892),(1272,572,1312,716)]:
-    a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0,y0),(x1,y1),1,-1); a=cv2.GaussianBlur(a,(0,0),2)
-    hot=np.clip((lumf(base)-0.02)/0.03,0,1)*a
-    base=base*(1-hot[...,None])+mn*hot[...,None]
+# The photo has lights on in two rooms and the mockups do not. The windows
+# (frames, muntins and dark glass) come from the soffit mockup, whose
+# windows are clean and unlit, so the grid reads properly at night.
+for (x0,y0,x1,y1) in [(870,560,990,735),(880,835,970,900),(1262,562,1322,725)]:
+    a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0+3,y0+3),(x1-3,y1-3),1,-1); a=cv2.GaussianBlur(a,(0,0),2.5)[...,None]
+    base=base*(1-a)+L['eave']*a
 # Where mockups disagree about objects (door, window box), keep one source.
 for (x0,y0,x1,y1) in [(628,596,712,790),(815,372,990,470)]:
     a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0,y0),(x1,y1),1,-1); a=cv2.GaussianBlur(a,(0,0),6)[...,None]
@@ -84,9 +85,21 @@ for k in L:
 # The holiday mockup also has the path and stone lighting switched on. The
 # holiday layer keeps only its own lights: strings, nets, wreath and box.
 hl=lumf(np.clip(L['holiday']-mn,0,None)); hb=cv2.GaussianBlur(hl,(0,0),1.0)
-near=cv2.GaussianBlur(((hb-cv2.GaussianBlur(hl,(0,0),7))>0.12).astype(np.float32),(0,0),7)
-near=np.clip(near*4,0,1)
+# Near a bulb: around detected bulb centres only, so an uplight's wash is
+# never mistaken for string lights.
+pk=((hb==cv2.dilate(hb,np.ones((5,5),np.uint8)))&((hb-cv2.GaussianBlur(hl,(0,0),7))>0.16)&(hb>0.3)).astype(np.float32)
+near=np.clip(cv2.GaussianBlur(pk,(0,0),5)*30,0,1)
 masks['holiday']*=1-np.maximum(masks['path'],masks['stone'])*(1-near)
+# Holiday lights go on the house and the bushes only: never on the lawn,
+# the walkway, the steps or the low planting along the path.
+ground=np.zeros((H,W),np.float32)
+cv2.fillPoly(ground,[np.array([(0,872),(452,868),(468,792),(712,792),(726,872),(1448,900),(1448,1086),(0,1086)],np.int32)],1)
+shrubs=np.zeros((H,W),np.float32)
+cv2.ellipse(shrubs,(262,780),(178,92),0,0,360,1,-1)   # the big shrub
+cv2.ellipse(shrubs,(772,690),(84,96),0,0,360,1,-1)    # the clipped tree
+cv2.ellipse(shrubs,(160,700),(66,34),0,0,360,1,-1)    # hedge behind it
+keep=np.clip(1-ground+shrubs,0,1)
+masks['holiday']*=cv2.GaussianBlur(keep,(0,0),4)
 # The door stays the real door in every state (the holiday mockup repainted it).
 a=np.zeros((H,W),np.float32); cv2.rectangle(a,(626,594),(714,792),1,-1); masks['holiday']*=1-cv2.GaussianBlur(a,(0,0),3)
 for k in L:
@@ -128,3 +141,27 @@ for i,a in enumerate([base,allon,base+layers['holiday'],np.dstack([snow,roof,fal
 sh.resize((1448,1086)).save('/tmp/mk/prev.jpg',quality=88)
 import os
 for f in sorted(os.listdir(OUT)): print(f,os.path.getsize(OUT+f)//1024,'KB')
+
+# ---- Tiers: the lowest package level at which each part of a layer lights.
+# Tier 3 is the full mockup; tier 2 drops the extras; tier 1 is the essentials.
+def tiermap(rules):
+    t=np.full((H,W),3,np.float32)
+    for tier,pts in rules:
+        m=np.zeros((H,W),np.uint8); cv2.fillPoly(m,[np.array(pts,np.int32)],1); t=np.where(m>0,np.minimum(t,tier),t)
+    return cv2.GaussianBlur(t,(0,0),5)
+rect=lambda x0,y0,x1,y1:[(x0,y0),(x1,y0),(x1,y1),(x0,y1)]
+T={
+ # Path: 1 = the two posts at the steps; 2 = every walkway post and pool; 3 = plus shrub and planting uplights.
+ 'path':[(2,[(0,895),(330,868),(560,868),(1060,925),(1060,1086),(0,1086)]),(2,rect(84,890,124,990)),(2,rect(122,832,144,878)),(2,rect(340,820,390,900)),
+         (1,rect(330,818,560,960))],
+ # Stone: 1 = the front face beside the tree; 2 = the whole front face; 3 = plus the entry stone and the corner pier.
+ 'stone':[(2,rect(735,520,1160,930)),(1,rect(745,520,965,930))],
+ # Soffit: 1 = the band over the stone; 2 = plus the wing eave; 3 = plus gable peaks, dormer and side.
+ 'eave':[(1,rect(735,500,1160,640)),(2,rect(255,540,480,640))],
+ # Holiday: 1 = the front gable and its eave line; 2 = every roofline; 3 = plus shrubs, tree, wreath and window box.
+ 'holiday':[(2,[(255,0),(1448,0),(1448,600),(255,600)]),(1,[(730,100),(912,100),(1170,250),(1170,560),(730,560)]),
+            (3,rect(815,380,995,475))],
+}
+tm=np.dstack([tiermap(T[k]) for k in ['path','stone','eave','holiday']])
+Image.fromarray(np.clip(tm*85,0,255).astype(np.uint8),'RGBA').save(OUT+'tier-map.png',optimize=True)
+print('tier map written')

@@ -1,0 +1,125 @@
+---
+import Base from '../../layouts/Base.astro';
+import PageHero from '../../components/PageHero.astro';
+import Faq from '../../components/Faq.astro';
+import { pricing } from '../../config/pricing';
+import { site } from '../../config/site';
+import { counties } from '../../data/counties';
+
+const faqs = [
+  { q: 'Is there a minimum?', a: `Yes. Holiday installations start at $${site.holidayMinimum}. Most homes price above that once the roofline is measured.` },
+  { q: 'Do I own the lights?', a: 'With a Single Install the lights are yours to keep. With Seasonal Service and the Annual Plan the lights are ours: we supply, maintain, take down and store them, which is why those plans cost less.' },
+  { q: 'What if a bulb goes out during the season?', a: 'Seasonal Service and Annual Plan clients get in-season maintenance: tell us and we come back and fix it.' },
+  { q: 'How accurate is the online estimate?', a: 'It is a range based on what you enter. We confirm the final price on site, before install, once we have measured the roofline and seen the trees.' },
+  { q: 'When should I book?', a: 'Install dates fill up through November and December. Anything scheduled inside five days is a rush install and costs more.' },
+];
+const schema = [
+  { '@context': 'https://schema.org', '@type': 'Service', serviceType: 'Holiday and Christmas light installation', provider: { '@id': new URL('/#business', Astro.site).href }, areaServed: counties.map((c) => `${c.name}, Maryland`), offers: { '@type': 'Offer', priceSpecification: { '@type': 'PriceSpecification', minPrice: site.holidayMinimum, priceCurrency: 'USD' } } },
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+];
+const o = pricing.offers;
+---
+<Base title="Holiday and Christmas light installation in Central Maryland | Regent Exterior Lighting" description={`Professional holiday lighting for Central Maryland homes: designed, installed, maintained and taken down. Instant estimate online. From $${site.holidayMinimum}. MHIC #41139.`} image="/img/holiday-full.webp" schema={schema}>
+  <main id="content">
+    <PageHero label="Regent Holiday Lighting" title="And for <em>December.</em>" lede="Rooflines outlined straight and true, shrubs and trees dressed, all installed, maintained through the season and taken down after it." image="/img/holiday-full.webp" alt="Stone and siding colonial at night with warm white lights along every roofline and on the shrubs" cta={{ href: '#estimate', text: 'Get an instant estimate' }} />
+
+    <section class="section">
+      <div class="sec-head"><p class="label">Three ways to have it</p><h2>Choose <em>how you want the season.</em></h2></div>
+      <div class="cards three">
+        <article class="card"><h3>{o.single.label}</h3><p>{o.single.note} One visit, no takedown included.</p></article>
+        <article class="card featured"><p class="tag">Most chosen</p><h3>{o.seasonal.label}</h3><p>{o.seasonal.note} One price, nothing to store.</p></article>
+        <article class="card"><h3>{o.annual.label}</h3><p>{o.annual.note} The same service every year without asking.</p></article>
+      </div>
+    </section>
+
+    <section class="section estimator" id="estimate">
+      <div class="sec-head"><p class="label">Instant estimate</p><h2>Your price, <em>in a minute.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you.</p></div>
+      <form class="form est" name="holiday-quote" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field" data-estimator>
+        <input type="hidden" name="form-name" value="holiday-quote" />
+        <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+        <input type="hidden" name="estimate" data-est-field />
+        <div class="est-grid">
+          <fieldset class="est-block">
+            <legend>Your home</legend>
+            <label>Storeys<select name="stories" data-k="stories"><option value="1">One</option><option value="2" selected>Two</option><option value="3">Three or more</option></select></label>
+            <label class="check"><input type="checkbox" name="steep" value="yes" data-k="steep" /><span>Steep roof (8/12 pitch or more)</span></label>
+            <label>Roofline to light, in feet<input type="number" name="roofline_ft" min="0" step="1" value="150" inputmode="numeric" data-k="roof" /></label>
+            <label>Of that, ridges and peaks, in feet<input type="number" name="ridge_ft" min="0" step="1" value="0" inputmode="numeric" data-k="ridge" /></label>
+            <label class="check"><input type="checkbox" name="measure_for_me" value="yes" data-k="measure" /><span>I'm not sure. Measure it for me.</span></label>
+          </fieldset>
+          <fieldset class="est-block">
+            <legend>What gets lit</legend>
+            <label>Trees under 10 ft<input type="number" name="trees_small" min="0" step="1" value="0" data-k="ts" /></label>
+            <label>Trees 10 to 25 ft<input type="number" name="trees_medium" min="0" step="1" value="0" data-k="tm" /></label>
+            <label class="check"><input type="checkbox" name="trees_large" value="yes" data-k="tl" /><span>Trees over 25 ft (quoted on site)</span></label>
+            <label>Shrubs<input type="number" name="shrubs" min="0" step="1" value="2" data-k="sh" /></label>
+            <label>Wreaths<input type="number" name="wreaths" min="0" step="1" value="0" data-k="wr" /></label>
+            <label>Windows outlined<input type="number" name="windows" min="0" step="1" value="0" data-k="wi" /></label>
+          </fieldset>
+          <fieldset class="est-block">
+            <legend>Your plan</legend>
+            <div class="radios">
+              {Object.entries(o).map(([k, v]) => <label class="check"><input type="radio" name="offer" value={v.label} data-offer={k} checked={k === 'seasonal'} /><span><strong>{v.label}</strong><br /><small>{v.note}</small></span></label>)}
+            </div>
+            <label>Colour<select name="colour"><option>Warm white</option><option>Cool white</option><option>Multicolour</option><option>Red and green</option><option>Blue and white</option></select></label>
+            <label class="check"><input type="checkbox" name="rush" value="yes" data-k="rush" /><span>I need it installed within 5 days</span></label>
+          </fieldset>
+        </div>
+        <div class="est-result" aria-live="polite">
+          <p class="label">Estimated range</p>
+          <p class="est-price" data-est-price>$0</p>
+          <p class="est-note" data-est-note>Confirmed on site before install.</p>
+        </div>
+        <div class="row">
+          <label>Name<input name="name" autocomplete="name" required /></label>
+          <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+        </div>
+        <div class="row">
+          <label>Phone<input type="tel" name="phone" autocomplete="tel" /></label>
+          <label>Street address<input name="address" autocomplete="street-address" required /></label>
+        </div>
+        <div class="row">
+          <label>Town or ZIP<input name="town" autocomplete="postal-code" required /></label>
+          <label>Preferred install window<select name="install_window"><option>As soon as possible</option><option>Mid November</option><option>Late November</option><option>Early December</option><option>Mid December</option></select></label>
+        </div>
+        <button class="btn solid" type="submit">Request this estimate</button>
+        <p class="fine">Sending this reserves nothing and costs nothing. We confirm the price on site, then send a written agreement. No payment is taken before it is signed.</p>
+      </form>
+    </section>
+
+    <Faq faqs={faqs} />
+  </main>
+
+  <script is:inline define:vars={{ P: pricing }}>
+    (function () {
+      var f = document.querySelector('[data-estimator]');
+      if (!f) return;
+      var get = function (k) { var el = f.querySelector('[data-k="' + k + '"]'); return el.type === 'checkbox' ? el.checked : Number(el.value) || 0; };
+      var fmt = function (n) { return '$' + (Math.round(n / 10) * 10).toLocaleString('en-US'); };
+      var out = f.querySelector('[data-est-price]'), note = f.querySelector('[data-est-note]'), field = f.querySelector('[data-est-field]');
+      var calc = function () {
+        var offer = f.querySelector('[data-offer]:checked').dataset.offer;
+        var roof = get('roof'), ridge = Math.min(get('ridge'), roof);
+        var up = Math.max(P.storyUplift[get('stories')] || 0, get('steep') ? P.steepUplift : 0);
+        var total = roof * P.rooflinePerFoot * (1 + up) + ridge * P.rooflinePerFoot * P.ridgeUplift;
+        total += get('ts') * P.treeSmall + get('tm') * P.treeMedium + get('sh') * P.shrub + get('wr') * P.wreath + get('wi') * P.window;
+        total *= P.offers[offer].factor;
+        if (get('rush')) total *= 1 + P.rushUplift;
+        var lo = Math.max(P.minimum, total * P.rangeLow), hi = Math.max(P.minimum, total * P.rangeHigh);
+        if (get('measure')) {
+          out.textContent = 'We will measure';
+          note.textContent = 'We will measure the roofline on site and send your price. Installations start at ' + fmt(P.minimum) + '.';
+          field.value = 'Measure on site';
+        } else {
+          out.textContent = lo === hi ? fmt(lo) : fmt(lo) + ' to ' + fmt(hi);
+          var extra = get('tl') ? ' Large trees are added after we see them.' : '';
+          note.textContent = (offer === 'annual' ? 'Per year, held for three years. ' : '') + 'Confirmed on site before install.' + extra;
+          field.value = out.textContent + ' (' + P.offers[offer].label + ')';
+        }
+      };
+      f.addEventListener('input', calc);
+      f.addEventListener('change', calc);
+      calc();
+    })();
+  </script>
+</Base>

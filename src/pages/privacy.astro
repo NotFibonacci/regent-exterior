@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+import { site } from '../config/site';
+---
+<Base title="Privacy | Regent Exterior Services" description="How Regent Exterior Services handles the information you send us.">
+  <main id="content">
+    <section class="page-intro"><p class="label">Privacy</p><h1>Your information</h1></section>
+    <section class="section prose">
+      <p>When you send a request through this site, we receive your name, contact details, address or town, and anything you tell us about your house. We use it only to reply to you, visit, quote and carry out the work you ask for.</p>
+      <p>We do not sell your information or share it with anyone except where needed to do your job (for example, a permit application) or where the law requires it.</p>
+      <p>Form submissions are processed by our website host, Netlify. This site does not use advertising trackers.</p>
+      <p>To see, correct or delete what we hold about you, email <a href={`mailto:${site.email}`}>{site.email}</a>.</p>
+    </section>
+  </main>
+</Base>

@@ -1,0 +1,15 @@
+---
+interface Props { label: string; title: string; lede: string; image: string; alt: string; cta?: { href: string; text: string } }
+const { label, title, lede, image, alt, cta = { href: '#request', text: 'Request a visit' } } = Astro.props;
+---
+<section class="page-hero">
+  <div class="ph-copy reveal">
+    <p class="label" style="--i:0">{label}</p>
+    <h1 style="--i:1" set:html={title} />
+    <p class="body" style="--i:2">{lede}</p>
+    <p style="--i:3"><a class="btn solid" href={cta.href}>{cta.text}</a></p>
+  </div>
+  <figure class="ph-media">
+    <img src={image} alt={alt} width="1100" height="825" fetchpriority="high" />
+  </figure>
+</section>

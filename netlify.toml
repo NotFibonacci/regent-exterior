@@ -4,3 +4,21 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Set SITE_URL to the live domain (e.g. https://regentexteriorservices.com)
+  # in Netlify's environment settings so canonical links and the sitemap use it.
+
+[[headers]]
+  for = "/_astro/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/home2/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

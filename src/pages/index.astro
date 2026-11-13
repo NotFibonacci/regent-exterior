@@ -1,11 +1,22 @@
 ---
 import Base from '../layouts/Base.astro';
 import PhotoStage from '../scene/PhotoStage.tsx';
+import LeadForm from '../components/LeadForm.astro';
 import { site } from '../config/site';
+import { divisions } from '../data/divisions';
+import { counties } from '../data/counties';
+
+const LAYERS = [
+  { id: 'path', name: 'Path and landscape', on: true },
+  { id: 'stone', name: 'Stone uplights', on: false },
+  { id: 'eaves', name: 'Soffit downlights', on: false },
+  { id: 'holiday', name: 'Holiday lights', on: false },
+];
 ---
 <Base
   title="Regent Exterior Services | Architectural and holiday lighting in Central Maryland"
-  description="Architectural and holiday lighting, designed and installed for homes in Baltimore, Anne Arundel, Howard, Prince George's and Carroll Counties. MHIC #41139."
+  description="Design the lighting on a real Maryland home, then book a design visit. Architectural, landscape and holiday lighting, plus windows, gutters, siding and doors. MHIC #41139."
+  preloader
 >
   <div id="stage" data-assets="/"><PhotoStage client:only="react" /></div>
   <p class="preview-note">Lighting preview on a real home. Not a completed installation.</p>
@@ -20,19 +31,23 @@ import { site } from '../config/site';
       </div>
     </section>
 
-    <section class="scene" data-scene="design">
+    <section class="scene" data-scene="design" id="design">
       <div class="copy reveal">
         <p class="label" style="--i:0">Design the lighting</p>
         <h2 style="--i:1">Choose <em>what comes on.</em></h2>
         <div class="layers" role="group" aria-label="Lighting" style="--i:2">
-          <button type="button" data-layer="path" aria-pressed="true">Path and landscape</button>
-          <button type="button" data-layer="stone" aria-pressed="false">Stone uplights</button>
-          <button type="button" data-layer="eaves" aria-pressed="false">Soffit downlights</button>
-          <button type="button" data-layer="holiday" aria-pressed="false">Holiday lights</button>
+          {LAYERS.map((l) => (
+            <div class="layer-row">
+              <button type="button" data-layer={l.id} aria-pressed={String(l.on)}>{l.name}</button>
+              <div class="tiers" role="radiogroup" aria-label={`${l.name} level`}>
+                {[1, 2, 3].map((t) => <button type="button" role="radio" data-tier-for={l.id} data-tier={t} aria-checked={String(t === 3)} aria-label={`Tier ${t}`}>{t}</button>)}
+              </div>
+            </div>
+          ))}
         </div>
         <p style="--i:3"><button type="button" class="pick" data-pick>Choose for me</button></p>
-        <p class="body layer-note" aria-live="polite" style="--i:3">Switch each layer on or off, in any combination. Path and landscape lighting is on to start.</p>
-        <div class="options" data-holiday-options hidden style="--i:4">
+        <p class="body layer-note" aria-live="polite" style="--i:4">Switch each layer on, and choose its level from 1 to 3. Path and landscape lighting is on to start.</p>
+        <div class="options" data-holiday-options hidden style="--i:5">
           <div class="swatches" role="group" aria-label="Holiday light colour">
             <button type="button" data-palette="warm" aria-pressed="true"><span style="background:#ffcf8a"></span>Warm white</button>
             <button type="button" data-palette="cool" aria-pressed="false"><span style="background:#d6ebff"></span>Cool white</button>
@@ -42,70 +57,113 @@ import { site } from '../config/site';
           </div>
           <button type="button" class="snow-toggle" data-snow aria-pressed="true">Snow</button>
         </div>
-        <p style="--i:5"><a class="btn" data-request href={`mailto:${site.email}?subject=Lighting%20design`}>Request this design</a></p>
+        <p style="--i:6"><a class="btn solid" data-request href="#request">Request this design</a></p>
       </div>
     </section>
   </main>
 
-  <footer class="closing">
-    <div class="inner">
-      <p class="label">Regent Exterior Lighting</p>
-      <h2>Begin with <em>a design visit.</em></h2>
-      <p class="body">Tell us about the house. We come out, see it in person, and give you a plan and a price.</p>
-      <p><a class="btn" href={`mailto:${site.email}?subject=Lighting%20design%20visit`}>Request a design visit</a></p>
-      <ul class="areas" aria-label="Counties served">
-        {site.counties.map((c) => <li>{c} County</li>)}
-      </ul>
-      <div class="legal">
-        <span>{site.name}</span>
-        <span>Licensed in Maryland · {site.license}</span>
+  <div class="after">
+    <section class="section intro-band">
+      <div class="sec-head"><p class="label">Regent Exterior Services</p><h2>Lighting first. <em>Every exterior trade beside it.</em></h2>
+      <p class="body">Our lighting division leads, and each of our other trades is run by its own specialists, held to the same standard.</p></div>
+      <div class="cards services">
+        <a class="card link feature-card" href="/lighting/"><img src="/img/lighting-full.webp" alt="" loading="lazy" width="1400" height="1050" /><h3>Architectural and landscape lighting</h3><p>Designed around your house, warm and on a timer.</p></a>
+        <a class="card link feature-card" href="/holiday-lighting/"><img src="/img/holiday-full.webp" alt="" loading="lazy" width="1400" height="1050" /><h3>Holiday lighting</h3><p>Installed, maintained and taken down. From ${site.holidayMinimum}.</p></a>
+        {divisions.map((d) => <a class="card link" href={`/${d.slug}/`}><h3>{d.brand.replace('Exterior ', '')}</h3><p>{d.lede}</p></a>)}
       </div>
-    </div>
-  </footer>
+    </section>
 
-  <script is:inline define:vars={{ email: site.email, minimum: site.holidayMinimum }}>
+    <section class="section split">
+      <div class="sec-head"><p class="label">How it works</p><h2>From a walk at dusk <em>to a lit house.</em></h2></div>
+      <ol class="steps">
+        <li><strong>Design it here.</strong> Switch on the layers you like and send us the design.</li>
+        <li><strong>Design visit.</strong> We see your house in person, ideally around dusk.</li>
+        <li><strong>Written plan and price.</strong> Fixture by fixture, before anything is installed.</li>
+        <li><strong>Install and night adjustment.</strong> We come back after dark to fine-tune every beam with you.</li>
+      </ol>
+    </section>
+
+    <section class="section areas-strip">
+      <p class="label">Serving Central Maryland</p>
+      <p class="areas-links">{counties.map((c) => <a href={`/service-areas/${c.slug}/`}>{c.name}</a>)}</p>
+    </section>
+
+    <LeadForm interest="Architectural and landscape lighting" />
+  </div>
+
+  <script is:inline define:vars={{ minimum: site.holidayMinimum }}>
     (function () {
-      var NOTES = {
-        path: 'Path lights along the flagstones, with the shrubs and planting picked out from below.',
-        stone: 'Uplights graze the stone from its base, so every course comes forward.',
-        eaves: 'Downlights tucked into the soffits wash the siding and the stone from above.',
-        holiday: 'Roofline, shrubs, wreath and window box: installed, maintained through the season and taken down after it. From $' + minimum + '.',
-      };
       var NAMES = { path: 'Path and landscape', stone: 'Stone uplights', eaves: 'Soffit downlights', holiday: 'Holiday lights' };
+      var TIERS = {
+        path: ['Path lights at the steps.', 'Path lights along the whole walk.', 'Path lights, with the shrubs and planting lit from below.'],
+        stone: ['Uplights on the stone beside the tree.', 'The whole stone front, grazed from its base.', 'The whole stone front, plus the entry stone and the corner.'],
+        eaves: ['Soffit downlights over the stone.', 'Soffit downlights over the stone and the wing.', 'Soffit downlights everywhere, gable peaks included.'],
+        holiday: ['The front gable outlined.', 'Every roofline outlined.', 'Every roofline, plus the shrubs, the tree and the window box.'],
+      };
+      var tier = { path: 3, stone: 3, eaves: 3, holiday: 3 };
       var note = document.querySelector('.layer-note');
       var holidayOptions = document.querySelector('[data-holiday-options]');
       var request = document.querySelector('[data-request]');
-      var layers = document.querySelectorAll('[data-layer]');
+      var layers = document.querySelectorAll('.layers [data-layer]');
       var swatches = document.querySelectorAll('[data-palette]');
       var snow = document.querySelector('[data-snow]');
+      var designField = document.querySelector('[data-design-field]');
+      var designSummary = document.querySelector('[data-design-summary]');
       var holiday = function (detail) { window.dispatchEvent(new CustomEvent('regent:holiday', { detail: detail })); };
+      var describe = function (name) {
+        var t = TIERS[name][tier[name] - 1];
+        return 'Tier ' + tier[name] + ': ' + t + (name === 'holiday' ? ' Installed, maintained and taken down. From $' + minimum + '.' : '');
+      };
 
-      var refresh = function () {
+      var summary = function () {
         var chosen = [];
-        document.querySelectorAll('.layers [data-layer]').forEach(function (b) { if (b.getAttribute('aria-pressed') === 'true') chosen.push(NAMES[b.dataset.layer]); });
+        layers.forEach(function (b) { if (b.getAttribute('aria-pressed') === 'true') chosen.push(NAMES[b.dataset.layer] + ' (tier ' + tier[b.dataset.layer] + ')'); });
         var colour = document.querySelector('[data-palette][aria-pressed="true"]');
-        var body = 'I would like a quote for: ' + (chosen.join(', ') || 'lighting') + '.';
-        if (chosen.indexOf(NAMES.holiday) > -1 && colour) body += ' Holiday colour: ' + colour.textContent.trim() + '.';
-        request.href = 'mailto:' + email + '?subject=' + encodeURIComponent('Lighting design') + '&body=' + encodeURIComponent(body);
+        var s = chosen.join(', ');
+        if (s && chosen.join().indexOf('Holiday') > -1 && colour) s += '; holiday colour: ' + colour.textContent.trim();
+        return s;
+      };
+      var refresh = function () {
+        var s = summary();
+        if (designField) designField.value = s;
+        if (designSummary) { designSummary.hidden = !s; designSummary.textContent = s ? 'Your design: ' + s + '.' : ''; }
+      };
+
+      var setLayer = function (name, on) {
+        var b = document.querySelector('.layers [data-layer="' + name + '"]');
+        b.setAttribute('aria-pressed', String(on));
+        b.parentNode.classList.toggle('on', on);
+        window.dispatchEvent(new CustomEvent('regent:lights', { detail: { layer: name, on: on } }));
+        if (name === 'holiday') {
+          holidayOptions.hidden = !on;
+          // Holiday lights bring the snow with them.
+          if (on) { snow.setAttribute('aria-pressed', 'true'); holiday({ snow: true }); }
+        }
+      };
+      var setTier = function (name, t) {
+        tier[name] = t;
+        document.querySelectorAll('[data-tier-for="' + name + '"]').forEach(function (o) { o.setAttribute('aria-checked', String(Number(o.dataset.tier) === t)); });
+        window.dispatchEvent(new CustomEvent('regent:tier', { detail: { layer: name, tier: t } }));
       };
 
       layers.forEach(function (b) {
+        b.parentNode.classList.toggle('on', b.getAttribute('aria-pressed') === 'true');
         b.addEventListener('click', function () {
-          var on = b.getAttribute('aria-pressed') !== 'true';
-          var name = b.dataset.layer;
-          // The switch on the house and the one in the panel stay in step.
-          document.querySelectorAll('[data-layer="' + name + '"]').forEach(function (o) { o.setAttribute('aria-pressed', String(on)); });
-          window.dispatchEvent(new CustomEvent('regent:lights', { detail: { layer: name, on: on } }));
-          // The note describes the layer just switched on, or failing that
-          // the last one still lit.
+          var name = b.dataset.layer, on = b.getAttribute('aria-pressed') !== 'true';
+          setLayer(name, on);
           var still = [];
-          document.querySelectorAll('.layers [data-layer]').forEach(function (o) { if (o.getAttribute('aria-pressed') === 'true') still.push(o.dataset.layer); });
-          note.textContent = on ? NOTES[name] : still.length ? NOTES[still[still.length - 1]] : 'Everything is off. This is the house as it stands tonight.';
-          if (name === 'holiday') {
-            holidayOptions.hidden = !on;
-            // Holiday lights bring the snow with them.
-            if (on) { snow.setAttribute('aria-pressed', 'true'); holiday({ snow: true }); }
-          }
+          layers.forEach(function (o) { if (o.getAttribute('aria-pressed') === 'true') still.push(o.dataset.layer); });
+          note.textContent = on ? describe(name) : still.length ? describe(still[still.length - 1]) : 'Everything is off. This is the house as it stands tonight.';
+          refresh();
+        });
+      });
+      document.querySelectorAll('[data-tier-for]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var name = b.dataset.tierFor;
+          setTier(name, Number(b.dataset.tier));
+          // Choosing a level switches that layer on.
+          if (document.querySelector('.layers [data-layer="' + name + '"]').getAttribute('aria-pressed') !== 'true') setLayer(name, true);
+          note.textContent = describe(name);
           refresh();
         });
       });
@@ -121,21 +179,25 @@ import { site } from '../config/site';
         snow.setAttribute('aria-pressed', String(on));
         holiday({ snow: on });
       });
+
       // Choose for me: the designer's pick for this house, switched on one
       // layer at a time. In the holiday season it includes the holiday lights.
-      var pick = document.querySelector('[data-pick]');
-      pick.addEventListener('click', function () {
+      document.querySelector('[data-pick]').addEventListener('click', function () {
         var m = new Date().getMonth();
-        var want = { path: true, stone: true, eaves: true, holiday: m === 10 || m === 11 || m === 0 };
+        var want = { path: 3, stone: 3, eaves: 2, holiday: (m === 10 || m === 11 || m === 0) ? 3 : 0 };
         var n = 0;
-        document.querySelectorAll('.layers [data-layer]').forEach(function (b) {
-          var on = b.getAttribute('aria-pressed') === 'true';
-          if (on !== want[b.dataset.layer]) setTimeout(function () { b.click(); }, n++ * 260);
+        Object.keys(want).forEach(function (name) {
+          setTimeout(function () {
+            if (want[name]) { setTier(name, want[name]); setLayer(name, true); } else setLayer(name, false);
+            refresh();
+          }, n++ * 300);
         });
         setTimeout(function () {
-          note.textContent = 'Our pick for this house: path and landscape lighting, uplights on the stone, and soffit downlights' + (want.holiday ? ', with holiday lights for the season.' : '.');
-        }, n * 260 + 20);
+          note.textContent = 'Our pick for this house: path and landscape and stone uplights at tier 3, soffit downlights at tier 2' + (want.holiday ? ', and holiday lights for the season.' : '.');
+        }, n * 300);
       });
+
+      request.addEventListener('click', refresh);
       refresh();
     })();
   </script>

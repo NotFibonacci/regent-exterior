@@ -1,0 +1,31 @@
+---
+import Base from '../layouts/Base.astro';
+import LeadForm from '../components/LeadForm.astro';
+import { site } from '../config/site';
+---
+<Base title="About | Regent Exterior Services" description="Regent Exterior Services is a licensed Maryland home improvement contractor (MHIC #41139) offering exterior lighting, holiday lighting, windows, gutters, siding and doors across Central Maryland." image="/img/house-day.webp">
+  <main id="content">
+    <section class="page-intro">
+      <p class="label">About</p>
+      <h1>Years of exterior work, <em>now after dark.</em></h1>
+      <p class="body">Regent Exterior Services comes from years of remodeling and home improvement work across Central Maryland. Regent Exterior Lighting is our newest division, built on the same habits: measure carefully, write it down, and do it once.</p>
+    </section>
+    <section class="section split">
+      <div class="sec-head"><p class="label">How we work</p><h2>What you can <em>expect from us.</em></h2></div>
+      <ol class="steps">
+        <li><strong>A visit before a price.</strong> We see the house in person before we quote anything that matters.</li>
+        <li><strong>A written scope.</strong> You know exactly what is included, what it costs and when it happens.</li>
+        <li><strong>Specialists for each trade.</strong> Lighting, windows, gutters, siding and doors each have their own people and their own standards.</li>
+        <li><strong>A clean site.</strong> We clean up every day and walk the property with you at the end.</li>
+      </ol>
+    </section>
+    <section class="section">
+      <div class="cards three">
+        <article class="card"><h3>Licensed</h3><p>Maryland Home Improvement Commission license {site.licenseNumber}. You can look us up on the MHIC website.</p></article>
+        <article class="card"><h3>Local</h3><p>We work in {site.counties.slice(0, -1).join(', ')} and {site.counties.at(-1)} Counties.</p></article>
+        <article class="card"><h3>Honest previews</h3><p>The lit images on this site are design previews on a real home, not photos of finished jobs.</p></article>
+      </div>
+    </section>
+    <LeadForm />
+  </main>
+</Base>

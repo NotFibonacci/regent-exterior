@@ -1,0 +1,43 @@
+---
+import { site } from '../config/site';
+interface Props { title?: string; lede?: string; interest?: string; id?: string }
+const { title = 'Request a <em>design visit.</em>', lede = 'Tell us about the house. We come out, see it in person, and give you a written plan and price.', interest = '', id = 'request' } = Astro.props;
+const services = ['Architectural and landscape lighting', 'Holiday lighting', 'Windows', 'Gutters', 'Siding', 'Doors'];
+---
+<section class="lead" id={id}>
+  <div class="lead-inner">
+    <div class="lead-copy">
+      <p class="label">Regent Exterior Services</p>
+      <h2 set:html={title} />
+      <p class="body">{lede}</p>
+      <ul class="assure">
+        <li>Licensed in Maryland, {site.license}</li>
+        <li>A written scope and price before any work</li>
+        <li>Serving {site.counties.slice(0, -1).join(', ')} and {site.counties.at(-1)} Counties</li>
+      </ul>
+    </div>
+    <form class="form" name="request" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="request" />
+      <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+      <input type="hidden" name="design" data-design-field value="" />
+      <div class="row">
+        <label>Name<input name="name" autocomplete="name" required /></label>
+        <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+      </div>
+      <div class="row">
+        <label>Phone<input type="tel" name="phone" autocomplete="tel" /></label>
+        <label>Town or ZIP<input name="town" autocomplete="address-level2" required /></label>
+      </div>
+      <fieldset>
+        <legend>What are you interested in?</legend>
+        <div class="checks">
+          {services.map((s) => <label class="check"><input type="checkbox" name="interest" value={s} checked={s === interest} /><span>{s}</span></label>)}
+        </div>
+      </fieldset>
+      <label>About the house<textarea name="message" rows="4" placeholder="Anything we should know: the style of the house, what you would like lit, timing."></textarea></label>
+      <p class="design-summary" data-design-summary hidden></p>
+      <button class="btn solid" type="submit">Send request</button>
+      <p class="fine">We reply by email{site.phone ? ' or phone' : ''}, usually within one business day.</p>
+    </form>
+  </div>
+</section>

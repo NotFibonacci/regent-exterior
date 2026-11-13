@@ -1,0 +1,63 @@
+---
+import Base from '../../layouts/Base.astro';
+import PageHero from '../../components/PageHero.astro';
+import Faq from '../../components/Faq.astro';
+import LeadForm from '../../components/LeadForm.astro';
+import { counties } from '../../data/counties';
+
+const faqs = [
+  { q: 'What does a lighting design visit involve?', a: 'We walk the property with you, ideally around dusk, decide what is worth lighting and what should stay dark, and leave you with a written plan and price. There is no obligation.' },
+  { q: 'What colour of light do you use?', a: 'Warm white, close to the glow of a lamp indoors. It flatters stone, brick and siding and sits comfortably next to porch and window light. Cooler and colour-changing fixtures are available if you want them.' },
+  { q: 'Will it light up my neighbours or the sky?', a: 'It should not. We aim fixtures at the house, trees and paths, shield them, and keep brightness low. Good outdoor lighting is noticed for what it shows, not for glare.' },
+  { q: 'How are the lights powered and controlled?', a: 'Low-voltage fixtures run from a transformer plugged into an outdoor outlet, so there is no high-voltage wiring in the garden. Lights come on at dusk and go off on a schedule you choose.' },
+  { q: 'Do you offer packages?', a: 'Each part of the design, such as path and landscape, uplighting on the walls, and soffit downlights, comes in three levels, from the essentials to the full design. You can see all of them on our home page and mix them as you like.' },
+];
+const schema = [
+  { '@context': 'https://schema.org', '@type': 'Service', serviceType: 'Architectural and landscape lighting', provider: { '@id': new URL('/#business', Astro.site).href }, areaServed: counties.map((c) => `${c.name}, Maryland`) },
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+];
+const parts = [
+  { img: '/img/lighting-path.webp', alt: 'Path lights along a flagstone walk with shrubs lit from below', h: 'Path and landscape', p: 'Low path lights mark the walk, and shrubs and planting are picked out from below. Guests find the door without a floodlight.' },
+  { img: '/img/lighting-stone.webp', alt: 'Stone wall grazed by uplights with soffit downlights above', h: 'Uplights and soffit downlights', p: 'Uplights graze stone and brick from the base so the texture comes forward. Downlights tucked into the soffits wash the walls from above.' },
+];
+---
+<Base title="Architectural and landscape lighting in Central Maryland | Regent Exterior Lighting" description="Architectural and landscape lighting designed for your house: warm, shielded and on a timer. Design visits across Baltimore, Anne Arundel, Howard, Prince George's and Carroll Counties. MHIC #41139." image="/img/lighting-full.webp" schema={schema}>
+  <main id="content">
+    <PageHero label="Regent Exterior Lighting" title="Your home, <em>after dark.</em>" lede="Lighting designed around the house you already have: the stone, the trees, the way in. Warm, quiet and on a timer." image="/img/lighting-full.webp" alt="Stone and siding colonial at night with path lights, stone uplights and soffit downlights" cta={{ href: '/#design', text: 'Design it on our house' }} />
+
+    <section class="section">
+      <div class="sec-head"><p class="label">The design</p><h2>Light what matters, <em>leave the rest dark.</em></h2></div>
+      <div class="feature-pair">
+        {parts.map((x) => (
+          <article class="feature reveal">
+            <img src={x.img} alt={x.alt} loading="lazy" width="1100" height="700" />
+            <h3>{x.h}</h3>
+            <p>{x.p}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="section split">
+      <div class="sec-head"><p class="label">How it works</p><h2>From a walk at dusk <em>to a lit house.</em></h2></div>
+      <ol class="steps">
+        <li><strong>Design visit.</strong> We walk the property with you and decide what to light.</li>
+        <li><strong>Written plan and price.</strong> Fixture by fixture, with the level you choose for each part.</li>
+        <li><strong>Installation.</strong> Low-voltage cable is buried, fixtures are set and aimed, and the transformer is put on a timer.</li>
+        <li><strong>Night adjustment.</strong> We come back after dark to fine-tune every beam with you.</li>
+      </ol>
+    </section>
+
+    <section class="section tiers-explainer">
+      <div class="sec-head"><p class="label">Levels</p><h2>Three levels for <em>every part.</em></h2></div>
+      <div class="cards three">
+        <article class="card"><h3>Tier 1</h3><p>The essentials: the entry, the walk at the steps, and the best feature of the house.</p></article>
+        <article class="card"><h3>Tier 2</h3><p>The whole front: every path light, the full face of the house, and the eaves above it.</p></article>
+        <article class="card"><h3>Tier 3</h3><p>The full design: planting, corners, gable peaks and the sides of the house.</p></article>
+      </div>
+    </section>
+
+    <Faq faqs={faqs} />
+    <LeadForm interest="Architectural and landscape lighting" />
+  </main>
+</Base>

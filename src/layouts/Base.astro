@@ -4,10 +4,38 @@ import '@fontsource-variable/newsreader/wght-italic.css';
 import '@fontsource-variable/instrument-sans';
 import '@fontsource/marcellus';
 import '../styles/global.css';
-import { site } from '../config/site';
+import { site, nav } from '../config/site';
+import { counties } from '../data/counties';
 
-interface Props { title: string; description: string; }
-const { title, description } = Astro.props;
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  preloader?: boolean;
+  schema?: Record<string, unknown>[];
+}
+const { title, description, image = '/img/lighting-full.webp', preloader = false, schema = [] } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogImage = new URL(image, Astro.site).href;
+const path = Astro.url.pathname;
+
+// Business details for search engines. Phone and address appear only once
+// they are filled in; nothing is invented.
+const business: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'HomeAndConstructionBusiness',
+  '@id': new URL('/#business', Astro.site).href,
+  name: site.name,
+  url: new URL('/', Astro.site).href,
+  email: site.email,
+  image: new URL('/img/lighting-full.webp', Astro.site).href,
+  logo: new URL('/regent-exterior-services.webp', Astro.site).href,
+  description: 'Architectural, landscape and holiday lighting, with windows, gutters, siding and doors, for homes in Central Maryland.',
+  areaServed: site.counties.map((c) => ({ '@type': 'AdministrativeArea', name: `${c} County, Maryland` })),
+  hasCredential: { '@type': 'EducationalOccupationalCredential', credentialCategory: 'license', name: `Maryland Home Improvement Commission license ${site.licenseNumber}` },
+};
+if (site.phone) business.telephone = site.phone;
+if (site.address) business.address = site.address;
 ---
 <!doctype html>
 <html lang="en">
@@ -16,47 +44,122 @@ const { title, description } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
     <meta name="theme-color" content="#08090b" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json" set:html={JSON.stringify(business)} />
+    {schema.map((s) => <script type="application/ld+json" set:html={JSON.stringify(s)} />)}
   </head>
-  <body>
+  <body class={preloader ? 'has-stage' : 'page'}>
     <a class="skip" href="#content">Skip to content</a>
 
-    <div id="preloader" aria-hidden="true">
-      <div class="frame">
-        <img src="/regent-exterior-services.webp" alt="" width="900" height="333" />
-        <span class="lampdot"></span>
+    {preloader && (
+      <div id="preloader" aria-hidden="true">
+        <div class="frame">
+          <img src="/regent-exterior-services.webp" alt="" width="900" height="333" />
+          <span class="lampdot"></span>
+        </div>
       </div>
-    </div>
+    )}
 
     <header class="site-header">
-      <a href="/" aria-label={`${site.name} home`}>
+      <a class="brand" href="/" aria-label={`${site.name} home`}>
         <img src="/regent-exterior-services.webp" alt={site.name} width="900" height="333" />
       </a>
+      <nav class="primary" aria-label="Main">
+        <ul>
+          {nav.map((n) => <li><a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a></li>)}
+        </ul>
+      </nav>
       <div class="meta">
-        <span class="license">{site.license}</span>
-        <a class="btn" href={`mailto:${site.email}?subject=Lighting%20design%20visit`}>Request a design visit</a>
+        {site.phone && <a class="phone" href={`tel:${site.phone.replace(/[^0-9+]/g, '')}`}>{site.phone}</a>}
+        <a class="btn" href="/contact/">Request a visit</a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><span>Menu</span></button>
       </div>
     </header>
+    <div id="mobile-menu" class="mobile-menu" hidden>
+      <ul>
+        {nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+        <li><a href="/contact/">Contact</a></li>
+      </ul>
+      <p class="license">Licensed in Maryland · {site.license}</p>
+    </div>
 
     <slot />
+
+    <footer class="site-footer">
+      <div class="inner">
+        <div class="col brandcol">
+          <img src="/regent-exterior-services.webp" alt={site.name} width="900" height="333" loading="lazy" />
+          <p>Exterior lighting, windows, gutters, siding and doors for homes in Central Maryland.</p>
+          <p class="license">Licensed in Maryland · {site.license}</p>
+          <p><a href={`mailto:${site.email}`}>{site.email}</a>{site.phone && <><br /><a href={`tel:${site.phone.replace(/[^0-9+]/g, '')}`}>{site.phone}</a></>}</p>
+          {site.address && <p>{site.address}</p>}
+        </div>
+        <div class="col">
+          <p class="label">Services</p>
+          <ul>
+            <li><a href="/lighting/">Architectural and landscape lighting</a></li>
+            <li><a href="/holiday-lighting/">Holiday lighting</a></li>
+            <li><a href="/windows/">Windows</a></li>
+            <li><a href="/gutters/">Gutters</a></li>
+            <li><a href="/siding/">Siding</a></li>
+            <li><a href="/doors/">Doors</a></li>
+          </ul>
+        </div>
+        <div class="col">
+          <p class="label">Service areas</p>
+          <ul>
+            {counties.map((c) => <li><a href={`/service-areas/${c.slug}/`}>{c.name}</a></li>)}
+          </ul>
+        </div>
+        <div class="col">
+          <p class="label">Company</p>
+          <ul>
+            <li><a href="/about/">About</a></li>
+            <li><a href="/contact/">Contact</a></li>
+            <li><a href="/privacy/">Privacy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="legal">
+        <span>© {new Date().getFullYear()} {site.name}</span>
+        <span>Images of lighting are design previews, not completed installations.</span>
+      </div>
+    </footer>
 
     <script is:inline>
       (function () {
         var pre = document.getElementById('preloader');
-        var done = function () { pre && pre.classList.add('done'); };
-        // The preloader lifts when the scene has drawn its first frame, and
-        // never holds the page longer than 4 seconds or shorter than 1.6.
-        var t0 = Date.now();
-        window.addEventListener('regent:ready', function () { setTimeout(done, Math.max(0, 1600 - (Date.now() - t0))); }, { once: true });
-        setTimeout(done, 4000);
-
+        if (pre) {
+          var done = function () { pre.classList.add('done'); };
+          // The preloader lifts when the scene has drawn its first frame, and
+          // never holds the page longer than 4 seconds or shorter than 1.6.
+          var t0 = Date.now();
+          window.addEventListener('regent:ready', function () { setTimeout(done, Math.max(0, 1600 - (Date.now() - t0))); }, { once: true });
+          setTimeout(done, 4000);
+        }
         var io = new IntersectionObserver(function (entries) {
-          entries.forEach(function (e) { e.target.classList.toggle('lit', e.isIntersecting); });
-        }, { threshold: 0.35 });
+          entries.forEach(function (e) { if (e.isIntersecting) e.target.classList.add('lit'); else if (e.target.closest('.scene')) e.target.classList.remove('lit'); });
+        }, { threshold: 0.2 });
         document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+
+        var toggle = document.querySelector('.menu-toggle');
+        var menu = document.getElementById('mobile-menu');
+        if (toggle && menu) toggle.addEventListener('click', function () {
+          var open = toggle.getAttribute('aria-expanded') !== 'true';
+          toggle.setAttribute('aria-expanded', String(open));
+          menu.hidden = !open;
+          document.body.classList.toggle('menu-open', open);
+        });
       })();
     </script>
   </body>
