@@ -69,7 +69,7 @@ float lod(float c) { return 1.0 - smoothstep(0.12, 0.36, fwidth(c)); }
 
 // Coursed fieldstone. Joints along a course are pushed around by noise so
 // no two stones are the same width. Returns height (0 in the mortar) and
-// two ids per stone for colour.
+// two ids per stone for color.
 float stoneH(vec2 uv, float rh, out vec2 id) {
   float row = floor(uv.y / rh);
   float x = uv.x / (rh * 2.3) + hash(vec2(row, 7.0)) * 5.0;
@@ -123,8 +123,8 @@ void main() {
 
   if (uKind == 1) {
     float m = stoneH(uv, 0.17, id);
-    vec3 tan_ = vec3(0.50, 0.41, 0.30), grey = vec3(0.40, 0.39, 0.37), pale = vec3(0.62, 0.57, 0.48), rust = vec3(0.42, 0.29, 0.20);
-    vec3 c = mix(tan_, grey, smoothstep(0.25, 0.6, id.x));
+    vec3 tan_ = vec3(0.50, 0.41, 0.30), gray = vec3(0.40, 0.39, 0.37), pale = vec3(0.62, 0.57, 0.48), rust = vec3(0.42, 0.29, 0.20);
+    vec3 c = mix(tan_, gray, smoothstep(0.25, 0.6, id.x));
     c = mix(c, pale, smoothstep(0.72, 0.9, id.y));
     c = mix(c, rust, smoothstep(0.86, 0.98, id.x) * 0.8);
     float grain = vnoise(uv * 34.0) * 0.6 + vnoise(uv * 90.0) * 0.4;

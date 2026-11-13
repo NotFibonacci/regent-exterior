@@ -41,8 +41,8 @@ export function estimate(i: EstimateInput) {
   };
   const materialCost = Object.values(mat).reduce((a, b) => a + b, 0) * (1 + rates.salesTax);
 
-  // Install labour.
-  const height = Math.max(hours.storey[i.stories] ?? 1, i.steep ? hours.steep : 1);
+  // Install labor.
+  const height = Math.max(hours.story[i.stories] ?? 1, i.steep ? hours.steep : 1);
   const installHours =
     (i.roofline / hours.rooflineFeetPerHour) * height +
     i.treesSmall * hours.treeSmall +

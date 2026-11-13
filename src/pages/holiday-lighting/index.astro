@@ -46,9 +46,9 @@ const addons = [
     </section>
 
     <Gallery label="The look" title="Warm, even, <em>all season.</em>" note="Photos and renderings show styles we install." photos={[
-      { src: '/img/holiday-multi.webp', alt: 'Brick-front porch at night with multicolour bulbs along the roofline and porch eave, garland on the railing and shrubs wrapped in colour', caption: 'Multicolour on the roofline, garland and shrubs, all on one plan.', w: 1337, h: 1176 },
-      { src: '/img/holiday-moonlit.webp', alt: 'Two-storey house under a full moon with icicle lights along the porch eave and every shrub wrapped in warm white', caption: 'Icicle lights along the eave and every shrub wrapped to match.', w: 906, h: 670 },
-      { src: '/img/holiday-bokeh.webp', alt: 'Out-of-focus multicolour holiday light displays on trees and frames at night', caption: 'Warm white, blue and white or red and green: your palette, set at the design visit.', w: 596, h: 400 },
+      { src: '/img/holiday-multi.webp', alt: 'Brick-front porch at night with multicolor bulbs along the roofline and porch eave, garland on the railing and shrubs wrapped in color', caption: 'Multicolor on the roofline, garland and shrubs, all on one plan.', w: 1337, h: 1176 },
+      { src: '/img/holiday-moonlit.webp', alt: 'Two-story house under a full moon with icicle lights along the porch eave and every shrub wrapped in warm white', caption: 'Icicle lights along the eave and every shrub wrapped to match.', w: 906, h: 670 },
+      { src: '/img/holiday-bokeh.webp', alt: 'Out-of-focus multicolor holiday light displays on trees and frames at night', caption: 'Warm white, blue and white or red and green: your palette, set at the design visit.', w: 596, h: 400 },
     ]} />
 
     <section class="section estimator" id="estimate">
@@ -61,7 +61,7 @@ const addons = [
         <div class="est-grid">
           <fieldset class="est-block">
             <legend>Your home</legend>
-            <label>Storeys<select name="stories" data-k="stories"><option value="1">One</option><option value="2" selected>Two</option><option value="3">Three or more</option></select></label>
+            <label>Stories<select name="stories" data-k="stories"><option value="1">One</option><option value="2" selected>Two</option><option value="3">Three or more</option></select></label>
             <label class="check"><input type="checkbox" name="steep" value="yes" data-k="steep" /><span>Steep roof (8/12 pitch or more)</span></label>
             <label>Roofline to light<select name="roofline_ft" data-k="roof">{feet.map((f) => <option value={f} selected={f === 150}>{f} ft</option>)}</select></label>
             <label class="check"><input type="checkbox" name="measure_for_me" value="yes" data-k="measure" /><span>I'm not sure. Measure it for me.</span></label>
@@ -97,7 +97,7 @@ const addons = [
             <div class="radios">
               {Object.entries(o).map(([k, v]) => <label class="check"><input type="radio" name="offer" value={v.label} data-offer={k} checked={k === 'seasonal'} /><span><strong>{v.label}</strong><br /><small>{v.note}</small></span></label>)}
             </div>
-            <label>Colour<select name="colour"><option>Warm white</option><option>Cool white</option><option>Multicolour</option><option>Red and green</option><option>Blue and white</option></select></label>
+            <label>Color<select name="color"><option>Warm white</option><option>Cool white</option><option>Multicolor</option><option>Red and green</option><option>Blue and white</option></select></label>
             <label class="check"><input type="checkbox" name="rush" value="yes" data-k="rush" /><span>I need it installed within 5 days</span></label>
           </fieldset>
         </div>

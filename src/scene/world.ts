@@ -108,7 +108,7 @@ export function buildWorld() {
     const slope = Math.hypot(span / 2, rise) + over;
     for (const side of [-1, 1]) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(slope, 0.1, length), mat(KIND.roof));
-      // Centre of the slab sits halfway between ridge and the extended eave.
+      // Center of the slab sits halfway between ridge and the extended eave.
       slab.position.set((side * (span / 2 + over * Math.cos(a))) / 2, (rise - over * Math.sin(a)) / 2 + 0.09, 0);
       slab.rotation.z = -side * a;
       box(KIND.trim, 0.05, 0.2, length, (side * slope) / 2, -0.06, 0, slab);
@@ -148,7 +148,7 @@ export function buildWorld() {
   box(KIND.mulch, 1.5, 0.06, 1.3, -0.6, 0.03, 3.85);
   box(KIND.mulch, 1.0, 0.06, 1.3, -3.5, 0.03, 3.85);
 
-  // ---- Main block (two storeys: stone below, siding above) ---------------
+  // ---- Main block (two stories: stone below, siding above) ---------------
   box(KIND.stone, 8, 2.8, 6.4, 0, 1.4, 0);
   box(KIND.siding, 8, 2.6, 6.4, 0, 4.1, 0);
   box(KIND.trim, 8.1, 0.1, 6.5, 0, 2.82, 0);

@@ -49,10 +49,10 @@ const LAYERS = [
         <p style="--i:3"><button type="button" class="pick" data-pick>Choose for me</button></p>
         <p class="body layer-note" aria-live="polite" style="--i:4">Switch each layer on, and choose its level from 1 to 3. Path and landscape lighting is on to start.</p>
         <div class="options" data-holiday-options hidden style="--i:5">
-          <div class="swatches" role="group" aria-label="Holiday light colour">
+          <div class="swatches" role="group" aria-label="Holiday light color">
             <button type="button" data-palette="warm" aria-pressed="true"><span style="background:#ffcf8a"></span>Warm white</button>
             <button type="button" data-palette="cool" aria-pressed="false"><span style="background:#d6ebff"></span>Cool white</button>
-            <button type="button" data-palette="multi" aria-pressed="false"><span style="background:conic-gradient(#ff3b2e 0 25%,#2fd84a 0 50%,#2f6bff 0 75%,#ff9a1f 0)"></span>Multicolour</button>
+            <button type="button" data-palette="multi" aria-pressed="false"><span style="background:conic-gradient(#ff3b2e 0 25%,#2fd84a 0 50%,#2f6bff 0 75%,#ff9a1f 0)"></span>Multicolor</button>
             <button type="button" data-palette="redgreen" aria-pressed="false"><span style="background:linear-gradient(90deg,#ff3b2e 50%,#2fd84a 50%)"></span>Red and green</button>
             <button type="button" data-palette="bluewhite" aria-pressed="false"><span style="background:linear-gradient(90deg,#2f6bff 50%,#d6ebff 50%)"></span>Blue and white</button>
           </div>
@@ -121,9 +121,9 @@ const LAYERS = [
       var summary = function () {
         var chosen = [];
         layers.forEach(function (b) { if (b.getAttribute('aria-pressed') === 'true') chosen.push(NAMES[b.dataset.layer] + ' (tier ' + tier[b.dataset.layer] + ')'); });
-        var colour = document.querySelector('[data-palette][aria-pressed="true"]');
+        var color = document.querySelector('[data-palette][aria-pressed="true"]');
         var s = chosen.join(', ');
-        if (s && chosen.join().indexOf('Holiday') > -1 && colour) s += '; holiday colour: ' + colour.textContent.trim();
+        if (s && chosen.join().indexOf('Holiday') > -1 && color) s += '; holiday color: ' + color.textContent.trim();
         return s;
       };
       var refresh = function () {

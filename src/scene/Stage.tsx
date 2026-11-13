@@ -5,7 +5,7 @@ import { buildWorld, GROUP, GROUP_COUNT } from './world';
 import { startTimeline, state } from './timeline';
 
 // Camera keyframes, one per scene section. Dollies only: the camera never
-// orbits the house, and rotation between neighbours stays small.
+// orbits the house, and rotation between neighbors stays small.
 const KEYS: { p: [number, number, number]; t: [number, number, number] }[] = [
   { p: [-14.0, 3.2, 30.0], t: [-1.5, 3.5, 0] }, // dusk: the whole house
   { p: [-9.5, 1.9, 21.0], t: [-2.2, 2.3, 3.0] }, // path: low, along the walk
@@ -51,7 +51,7 @@ function Rig() {
     };
   }, []);
 
-  // Compose the house off-centre so the copy has clear sky to sit on:
+  // Compose the house off-center so the copy has clear sky to sit on:
   // right of the text on wide screens, above it on phones.
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera;

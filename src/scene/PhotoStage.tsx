@@ -14,7 +14,7 @@ import { startTimeline, state } from './timeline';
 const IMG_ASPECT = 4 / 3;
 const G = { path: 0, stone: 1, eaves: 3, holiday: 4 } as const;
 
-// Colour options for the holiday layer. Bulbs take one of up to four colours.
+// Color options for the holiday layer. Bulbs take one of up to four colors.
 const PALETTES: Record<string, [number, number, number][]> = {
   warm: [],
   cool: [[0.72, 0.88, 1.0]],
@@ -23,7 +23,7 @@ const PALETTES: Record<string, [number, number, number][]> = {
   bluewhite: [[0.05, 0.22, 1.0], [0.85, 0.93, 1.0]],
 };
 
-// View: centre (image %) and zoom for the opening shot and the night scene.
+// View: center (image %) and zoom for the opening shot and the night scene.
 const KEYS = [
   { c: [50, 52], z: 0.8 },
   { c: [50, 50], z: 0.8 },
@@ -46,7 +46,7 @@ uniform sampler2D tEave;
 uniform sampler2D tHol;
 uniform sampler2D tTier;  // per layer: lowest tier at which each pixel lights (1-3)
 uniform vec4 uTier;       // chosen tier per layer, animated between whole numbers
-uniform sampler2D tMap;   // r: bulb colour index, g: nearness to a bulb, b: snow cover, a: not-sky
+uniform sampler2D tMap;   // r: bulb color index, g: nearness to a bulb, b: snow cover, a: not-sky
 uniform vec2 uC;
 uniform float uZ;
 uniform vec2 uF;
@@ -101,7 +101,7 @@ void main() {
     // are on, the brighter one wins, as overlapping light would.
     vec4 lp = texture2D(tPath, t), ls = texture2D(tStone, t), le = texture2D(tEave, t), lh = texture2D(tHol, t);
     if (uPalN > 0.5) {
-      // Recolour the string lights bulb by bulb; spill away from a bulb
+      // Recolor the string lights bulb by bulb; spill away from a bulb
       // stays close to neutral so white trim is never blotched.
       vec3 glow = max(lh.rgb - base, 0.0);
       float l = luma(glow);

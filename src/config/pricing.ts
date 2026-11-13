@@ -1,16 +1,16 @@
 // Holiday lighting pricing: real material cost + 6% Maryland sales tax +
-// labour at the crew's hourly rates, then the markup. Edit numbers here only;
+// labor at the crew's hourly rates, then the markup. Edit numbers here only;
 // the estimator on /holiday-lighting/ runs src/config/estimate.ts on them.
 // Customers only ever see a range, confirmed on site.
 
-// Hourly labour (company-wide; the skilled-trade rate also applies to
+// Hourly labor (company-wide; the skilled-trade rate also applies to
 // windows, doors, gutters and siding work when those are priced).
 export const rates = {
   lightingLabor: 30, // per laborer-hour, all lighting work (holiday and landscape)
   electrician: 40, // making the power connections (range given: $37.50-$40)
   skilledTrade: 40, // windows, doors, siding, gutters (range given: $37.50-$40)
   salesTax: 0.06, // Maryland, flat statewide, on materials
-  markup: 0.48, // on total cost (materials incl. tax + labour)
+  markup: 0.48, // on total cost (materials incl. tax + labor)
 };
 
 // Material unit costs, from current supplier prices (Nov 2026).
@@ -36,9 +36,9 @@ export const usage = {
 
 // Laborer-hours per item (install). Height slows roofline work.
 export const hours = {
-  rooflineFeetPerHour: 25, // one laborer, single storey, clipping and lamping C9
-  storey: { 1: 1, 2: 1.25, 3: 1.5 } as Record<number, number>,
-  steep: 1.5, // 8/12 pitch or steeper (replaces the storey factor if higher)
+  rooflineFeetPerHour: 25, // one laborer, single story, clipping and lamping C9
+  story: { 1: 1, 2: 1.25, 3: 1.5 } as Record<number, number>,
+  steep: 1.5, // 8/12 pitch or steeper (replaces the story factor if higher)
   treeSmall: 1,
   treeMedium: 3,
   shrub: 0.5,
@@ -62,7 +62,7 @@ export const crew = {
 
 export const pricing = {
   leaseSeasons: 3, // leased lights are reused for 3 seasons; each season carries a third of their cost
-  rushUplift: 0.3, // install inside 5 days: overtime on labour
+  rushUplift: 0.3, // install inside 5 days: overtime on labor
   offers: {
     single: { label: 'Single Install', premium: 0.2, note: 'Installed once; the lights are yours to keep.' },
     seasonal: { label: 'Seasonal Service', premium: 0, note: 'Install, in-season maintenance and takedown. Lights leased.' },
