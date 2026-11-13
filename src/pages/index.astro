@@ -30,6 +30,7 @@ import { site } from '../config/site';
           <button type="button" data-layer="eaves" aria-pressed="false">Soffit downlights</button>
           <button type="button" data-layer="holiday" aria-pressed="false">Holiday lights</button>
         </div>
+        <p style="--i:3"><button type="button" class="pick" data-pick>Choose for me</button></p>
         <p class="body layer-note" aria-live="polite" style="--i:3">Switch each layer on or off, in any combination. Path and landscape lighting is on to start.</p>
         <div class="options" data-holiday-options hidden style="--i:4">
           <div class="swatches" role="group" aria-label="Holiday light colour">
@@ -119,6 +120,21 @@ import { site } from '../config/site';
         var on = snow.getAttribute('aria-pressed') !== 'true';
         snow.setAttribute('aria-pressed', String(on));
         holiday({ snow: on });
+      });
+      // Choose for me: the designer's pick for this house, switched on one
+      // layer at a time. In the holiday season it includes the holiday lights.
+      var pick = document.querySelector('[data-pick]');
+      pick.addEventListener('click', function () {
+        var m = new Date().getMonth();
+        var want = { path: true, stone: true, eaves: true, holiday: m === 10 || m === 11 || m === 0 };
+        var n = 0;
+        document.querySelectorAll('.layers [data-layer]').forEach(function (b) {
+          var on = b.getAttribute('aria-pressed') === 'true';
+          if (on !== want[b.dataset.layer]) setTimeout(function () { b.click(); }, n++ * 260);
+        });
+        setTimeout(function () {
+          note.textContent = 'Our pick for this house: path and landscape lighting, uplights on the stone, and soffit downlights' + (want.holiday ? ', with holiday lights for the season.' : '.');
+        }, n * 260 + 20);
       });
       refresh();
     })();

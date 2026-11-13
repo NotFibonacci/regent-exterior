@@ -15,19 +15,35 @@ lin=lambda a:(a.astype(np.float32)/255)**2.2
 enc=lambda a:(np.clip(a,0,1)**(1/2.2)*255).astype(np.uint8)
 L={k:lin(v) for k,v in m.items()}
 # Unlit base: darkest value any mockup shows for each pixel.
-# The soffit mockup (darker siding) is left out of the base.
-mn=np.minimum.reduce([L['path'],L['stone'],L['holiday']])
-# One crisp source for the unlit house: the stone mockup, except where its own
-# uplights fall, which come from the darkest of the set. A per-pixel minimum
-# everywhere smeared the siding laps (owner caught this).
 lumf=lambda a:a@np.array([.2126,.7152,.0722],np.float32)
-own=cv2.GaussianBlur(np.clip((lumf(L['stone'])-lumf(mn)-0.004)/0.02,0,1),(0,0),6)
-own=np.clip(own*2.5,0,1)[...,None]
-base=L['stone']*(1-own)+mn*own
+# The unlit house is the real night photograph (it lines up with the mockups
+# to a tenth of a pixel). It has no fixtures at all, and its siding laps and
+# stone joints are real. Its tone is graded to the mockups' look: the
+# low-frequency ratio between the stone mockup and the photo is measured
+# where the mockup is unlit, then spread smoothly over the whole frame.
+R=lin(real)
+mn=np.minimum.reduce([L['path'],L['stone'],L['holiday'],L['eave']])
+unlit=(lumf(L['stone'])-lumf(mn)<0.003).astype(np.float32)
+ratio=np.clip((L['stone']+0.002)/(R+0.002),0.05,6.0)
+lr=np.log(ratio)
+ok=unlit*((np.abs(lr-np.median(lr,axis=(0,1)))<1.2).all(-1)).astype(np.float32)
+def nconv(v,wt,sig):
+    return cv2.GaussianBlur(v*wt,(0,0),sig)/(cv2.GaussianBlur(wt,(0,0),sig)+1e-6)
+grade=np.dstack([np.exp(nconv(lr[...,c],ok,28)) for c in range(3)])
+base=R*grade
+# Yard sign: cover the painted-out patch with stone cloned from its left.
+x0,y0,x1,y1=1096,816,1158,920; sx=64
+a=np.zeros((y1-y0,x1-x0),np.float32); a[6:-6,6:-6]=1; a=cv2.GaussianBlur(a,(0,0),3)[...,None]
+base[y0:y1,x0:x1]=base[y0:y1,x0-sx:x1-sx]*a+base[y0:y1,x0:x1]*(1-a)
+# The photo has lights on in two rooms; the mockups do not. Dim the glass.
+for (x0,y0,x1,y1) in [(884,574,976,722),(888,842,962,892),(1272,572,1312,716)]:
+    a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0,y0),(x1,y1),1,-1); a=cv2.GaussianBlur(a,(0,0),2)
+    hot=np.clip((lumf(base)-0.02)/0.03,0,1)*a
+    base=base*(1-hot[...,None])+mn*hot[...,None]
 # Where mockups disagree about objects (door, window box), keep one source.
 for (x0,y0,x1,y1) in [(628,596,712,790),(815,372,990,470)]:
     a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0,y0),(x1,y1),1,-1); a=cv2.GaussianBlur(a,(0,0),6)[...,None]
-    base=base*(1-a)+L['stone']*a
+    pass
 # Sky from the stone mockup.
 s=m['stone']; hsv=cv2.cvtColor(s,cv2.COLOR_RGB2HSV)
 cand=((s[...,2].astype(int)>s[...,0].astype(int)+10)&(hsv[...,2]>25)).astype(np.uint8)
@@ -38,17 +54,45 @@ sky=cv2.GaussianBlur(sky,(0,0),1.5)[...,None]
 base=base*(1-sky)+L['stone']*sky
 lum=lambda a:a@np.array([.2126,.7152,.0722],np.float32)
 layers={}
+logl=lambda a:np.log(lumf(a)+0.002)
+hp=lambda a:logl(a)-cv2.GaussianBlur(logl(a),(0,0),4)
+bulbnear=None
+masks={}
+mailbox=np.zeros((H,W),np.float32); cv2.ellipse(mailbox,(516,772),(70,82),0,0,360,1,-1); mailbox=cv2.GaussianBlur(mailbox,(0,0),9)
+# Light fixtures drawn in the path mockup (posts, caps, small cans), traced
+# by hand. They belong to the path layer only, so with nothing switched on
+# there is no hardware on the property at all.
+POSTS=[(86,898,122,984),(124,836,142,874),(348,828,380,894),(501,874,534,944),(642,864,662,894),
+       (1004,926,1044,1038),(1052,884,1074,908),(1178,880,1202,908),(722,890,738,912)]
 for k in L:
-    d=np.clip(L[k]-base,0,None)*(1-sky)
-    # Lit mask: where this mockup is clearly brighter than the unlit house.
-    # Inside it the page shows the mockup itself, so lap shadows and stone
-    # joints under the light stay exactly as the mockup drew them.
-    w=np.clip((cv2.GaussianBlur(lum(d),(0,0),3)-0.004)/0.022,0,1); w=w*w*(3-2*w)
-    w=cv2.GaussianBlur(w,(0,0),2)*(1-sky[...,0])
-    if True:  # the post by the steps is a mailbox, not a lantern: it never lights, in any layer
-        a=np.zeros((H,W),np.float32); cv2.ellipse(a,(516,772),(70,82),0,0,360,1,-1); w*=(1-cv2.GaussianBlur(a,(0,0),9))
-    layers[k]=d*w[...,None]
-    rgba=np.dstack([enc(L[k]),(w*255).astype(np.uint8)])
+    # Lit mask: light this mockup adds over the darkest of the set, so the
+    # mockups' shared look (white trim, grass) never counts as light.
+    d=np.clip(L[k]-mn,0,None)*(1-sky)
+    w=np.clip((cv2.GaussianBlur(lumf(d),(0,0),3)-0.005)/0.025,0,1); w=w*w*(3-2*w)
+    w=cv2.GaussianBlur(w,(0,0),3)*(1-sky[...,0])
+    if k=='path':
+        pm=np.zeros((H,W),np.float32)
+        for (x0,y0,x1,y1) in POSTS: cv2.rectangle(pm,(x0,y0),(x1,y1),1,-1)
+        w=np.maximum(w,cv2.GaussianBlur(pm,(0,0),1.5))
+    else:
+        # Other mockups' copies of path hardware stay out of their layers.
+        pm=np.zeros((H,W),np.float32)
+        for (x0,y0,x1,y1) in POSTS: cv2.rectangle(pm,(x0-6,y0-8),(x1+6,y1+4),1,-1)
+        w*=1-cv2.GaussianBlur(pm,(0,0),2)
+    w*=(1-mailbox)
+    masks[k]=w
+# The holiday mockup also has the path and stone lighting switched on. The
+# holiday layer keeps only its own lights: strings, nets, wreath and box.
+hl=lumf(np.clip(L['holiday']-mn,0,None)); hb=cv2.GaussianBlur(hl,(0,0),1.0)
+near=cv2.GaussianBlur(((hb-cv2.GaussianBlur(hl,(0,0),7))>0.12).astype(np.float32),(0,0),7)
+near=np.clip(near*4,0,1)
+masks['holiday']*=1-np.maximum(masks['path'],masks['stone'])*(1-near)
+# The door stays the real door in every state (the holiday mockup repainted it).
+a=np.zeros((H,W),np.float32); cv2.rectangle(a,(626,594),(714,792),1,-1); masks['holiday']*=1-cv2.GaussianBlur(a,(0,0),3)
+for k in L:
+    w=masks[k]
+    layers[k]=np.clip(L[k]-mn,0,None)*w[...,None]
+    rgba=np.dstack([enc(L[k]),(np.clip(w,0,1)*255).astype(np.uint8)])
     Image.fromarray(rgba,'RGBA').save(OUT+f'light-{k}.webp',quality=90,method=6,exact=True)
 Image.fromarray(enc(base)).save(OUT+'base.webp',quality=92,method=6)
 Image.fromarray(real).save(OUT+'real.webp',quality=86,method=6)

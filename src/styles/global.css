@@ -279,3 +279,11 @@ main a, main button { pointer-events: auto; }
 }
 @keyframes ping { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(2.8); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .spot i::after { animation: none; opacity: 0; } }
+
+/* Choose for me: a quiet text button under the switches. */
+.pick {
+  font: 500 14px var(--sans); color: var(--cream); background: none; border: 0; padding: 4px 0; cursor: pointer;
+  border-bottom: 1px solid var(--brass); transition: color 240ms var(--ease), border-color 240ms var(--ease);
+}
+.pick::before { content: '\2726'; color: var(--lamp); margin-right: 8px; }
+.pick:hover { color: var(--lamp); border-color: var(--lamp); }
