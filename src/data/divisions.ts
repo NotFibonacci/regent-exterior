@@ -120,7 +120,7 @@ export const divisions: Division[] = [
         { src: '/img/siding-plank.webp', name: 'Wood-tone plank', text: 'Warm, wide planks as an accent on entries and modern facades.' },
       ] },
       { id: 'stone-facades', label: 'Stone facades', title: 'Stone, <em>laid by hand.</em>', body: 'Stone veneer across a whole front, or as a base course and wainscot below siding. Pattern and color are chosen against your brick, roof and trim.', items: [
-        { src: '/img/stone-ledge-gray.webp', name: 'Ledgestone, gray', text: 'Thin stacked strips with crisp shadows. Clean and contemporary.' },
+        { src: '/img/stone-ledge-grey.webp', name: 'Ledgestone, gray', text: 'Thin stacked strips with crisp shadows. Clean and contemporary.' },
         { src: '/img/stone-ledge-earth.webp', name: 'Ledgestone, earth', text: 'The same stacked pattern in warm tans and browns.' },
         { src: '/img/stone-stacked-white.webp', name: 'Stacked stone, white', text: 'Bright, textured and modern, beautiful under uplighting.' },
         { src: '/img/stone-fieldstone.webp', name: 'Fieldstone', text: 'Rounded, varied stones. The classic Maryland country look.' },
