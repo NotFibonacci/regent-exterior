@@ -93,26 +93,28 @@ void main() {
     vec3 base = texture2D(tBase, t).rgb;
     vec4 map = texture2D(tMap, t);
     float sn = map.b * uSnow;
-    // Settled snow keeps the shading of what lies under it.
-    base = mix(base, vec3(0.085, 0.10, 0.15) * (0.55 + 6.0 * luma(base)), sn);
 
-    vec3 hol = texture2D(tHol, t).rgb;
+    // Each layer is the mockup for that lighting type plus a mask of where
+    // it is lit. Inside the mask the mockup itself is shown; where several
+    // are on, the brighter one wins, as overlapping light would.
+    vec4 lp = texture2D(tPath, t), ls = texture2D(tStone, t), le = texture2D(tEave, t), lh = texture2D(tHol, t);
     if (uPalN > 0.5) {
-      // Recolour the string lights bulb by bulb; glow further from a bulb
-      // takes the average of the palette.
+      // Recolour the string lights bulb by bulb; spill away from a bulb
+      // stays close to neutral so white trim is never blotched.
+      vec3 glow = max(lh.rgb - base, 0.0);
+      float l = luma(glow);
       vec3 own = uPal[int(mod(floor(map.r * 3.0 + 0.5), uPalN))];
       vec3 avg = (uPal[0] + uPal[1] + uPal[2] + uPal[3]) * 0.25;
-      float l = luma(hol);
-      // Away from the bulbs the spill stays close to neutral, so white trim
-      // is never blotched with colour.
-      hol = mix(mix(vec3(l), avg * l * 1.3, 0.45), own * l * 2.2 + vec3(1.0) * smoothstep(0.55, 1.0, l) * 0.5, map.g * map.g);
+      glow = mix(mix(vec3(l), avg * l * 1.3, 0.45), own * l * 2.2 + vec3(1.0) * smoothstep(0.55, 1.0, l) * 0.5, map.g * map.g);
+      lh.rgb = min(lh.rgb, base) + glow;
     }
-    vec3 light = max(max(texture2D(tPath, t).rgb * uOn.x, texture2D(tStone, t).rgb * uOn.y),
-                     max(texture2D(tEave, t).rgb * uOn.z, hol * uOn.w));
-    // Snow throws light back.
-    light *= 1.0 + 1.2 * sn;
-
-    nightCol = base + light;
+    vec4 on = min(uOn, vec4(1.0));
+    vec3 lit = max(max(lp.rgb * on.x, ls.rgb * on.y), max(le.rgb * on.z, lh.rgb * on.w));
+    float w = max(max(lp.a * on.x, ls.a * on.y), max(le.a * on.z, lh.a * on.w));
+    nightCol = mix(base, lit, w) * (1.0 + 0.08 * max(max(uOn.x, uOn.y), max(uOn.z, uOn.w)) * w - 0.08 * w);
+    // Settled snow keeps the shading of what lies under it and throws light back.
+    float nl = luma(nightCol);
+    nightCol = mix(nightCol, mix(vec3(0.085, 0.10, 0.15) * (0.55 + 6.0 * nl), nightCol * 2.2 + 0.02, smoothstep(0.02, 0.2, nl) * w), sn);
     nightCol += texture2D(tReal, t).rgb * WARM * handLamp(p) * map.a * 1.4;
   }
 

@@ -1,7 +1,7 @@
 import cv2, numpy as np
 from PIL import Image, ImageDraw
 U='/mnt/user-data/uploads/'; OUT='/home/claude/regent-exterior/public/home2/'
-N={'path':'73f79c83','stone':'1ed70ea6','eave':'7c17b776','holiday':'2019fc99'}
+N={'path':'73f79c83','stone':'1ed70ea6','eave':'bcf14a73','holiday':'2019fc99'}
 W,H=1448,1086
 def load(p): return np.array(Image.open(p).convert('RGB').resize((W,H),Image.LANCZOS))
 m={k:load(U+v+'-image.png') for k,v in N.items()}
@@ -15,12 +15,19 @@ lin=lambda a:(a.astype(np.float32)/255)**2.2
 enc=lambda a:(np.clip(a,0,1)**(1/2.2)*255).astype(np.uint8)
 L={k:lin(v) for k,v in m.items()}
 # Unlit base: darkest value any mockup shows for each pixel.
-base=np.minimum.reduce(list(L.values()))
+# The soffit mockup (darker siding) is left out of the base.
+mn=np.minimum.reduce([L['path'],L['stone'],L['holiday']])
+# One crisp source for the unlit house: the stone mockup, except where its own
+# uplights fall, which come from the darkest of the set. A per-pixel minimum
+# everywhere smeared the siding laps (owner caught this).
+lumf=lambda a:a@np.array([.2126,.7152,.0722],np.float32)
+own=cv2.GaussianBlur(np.clip((lumf(L['stone'])-lumf(mn)-0.004)/0.02,0,1),(0,0),6)
+own=np.clip(own*2.5,0,1)[...,None]
+base=L['stone']*(1-own)+mn*own
 # Where mockups disagree about objects (door, window box), keep one source.
 for (x0,y0,x1,y1) in [(628,596,712,790),(815,372,990,470)]:
     a=np.zeros((H,W),np.float32); cv2.rectangle(a,(x0,y0),(x1,y1),1,-1); a=cv2.GaussianBlur(a,(0,0),6)[...,None]
-    src=np.minimum(L['stone'],L['path'])
-    base=base*(1-a)+src*a
+    base=base*(1-a)+L['stone']*a
 # Sky from the stone mockup.
 s=m['stone']; hsv=cv2.cvtColor(s,cv2.COLOR_RGB2HSV)
 cand=((s[...,2].astype(int)>s[...,0].astype(int)+10)&(hsv[...,2]>25)).astype(np.uint8)
@@ -33,12 +40,16 @@ lum=lambda a:a@np.array([.2126,.7152,.0722],np.float32)
 layers={}
 for k in L:
     d=np.clip(L[k]-base,0,None)*(1-sky)
-    w=np.clip((lum(d)-0.006)/0.03,0,1); w=w*w*(3-2*w)
-    d*=w[...,None]
-    if k=='eave':  # no window box popping in with the soffit lights
-        a=np.zeros((H,W),np.float32); cv2.rectangle(a,(815,385),(990,470),1,-1); d*=(1-cv2.GaussianBlur(a,(0,0),5))[...,None]
-    layers[k]=d
-    Image.fromarray(enc(d)).save(OUT+f'light-{k}.webp',quality=90,method=6)
+    # Lit mask: where this mockup is clearly brighter than the unlit house.
+    # Inside it the page shows the mockup itself, so lap shadows and stone
+    # joints under the light stay exactly as the mockup drew them.
+    w=np.clip((cv2.GaussianBlur(lum(d),(0,0),3)-0.004)/0.022,0,1); w=w*w*(3-2*w)
+    w=cv2.GaussianBlur(w,(0,0),2)*(1-sky[...,0])
+    if True:  # the post by the steps is a mailbox, not a lantern: it never lights, in any layer
+        a=np.zeros((H,W),np.float32); cv2.ellipse(a,(516,772),(70,82),0,0,360,1,-1); w*=(1-cv2.GaussianBlur(a,(0,0),9))
+    layers[k]=d*w[...,None]
+    rgba=np.dstack([enc(L[k]),(w*255).astype(np.uint8)])
+    Image.fromarray(rgba,'RGBA').save(OUT+f'light-{k}.webp',quality=90,method=6,exact=True)
 Image.fromarray(enc(base)).save(OUT+'base.webp',quality=92,method=6)
 Image.fromarray(real).save(OUT+'real.webp',quality=86,method=6)
 # Holiday bulbs: local maxima of the holiday layer; each gets a colour index.

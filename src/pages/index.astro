@@ -10,13 +10,6 @@ import { site } from '../config/site';
   <div id="stage" data-assets="/"><PhotoStage client:only="react" /></div>
   <p class="preview-note">Lighting preview on a real home. Not a completed installation.</p>
 
-  <div class="spots">
-    <button type="button" class="spot" data-layer="path" data-spot="36,80.5" aria-pressed="true"><i></i><span>Path</span></button>
-    <button type="button" class="spot" data-layer="stone" data-spot="66,71" aria-pressed="false"><i></i><span>Stone</span></button>
-    <button type="button" class="spot" data-layer="eaves" data-spot="62.5,17" aria-pressed="false"><i></i><span>Eaves</span></button>
-    <button type="button" class="spot" data-layer="holiday" data-spot="47.5,41" aria-pressed="false"><i></i><span>Holiday</span></button>
-  </div>
-
   <main id="content">
     <section class="scene" data-scene="dusk">
       <div class="copy reveal">
@@ -30,14 +23,14 @@ import { site } from '../config/site';
     <section class="scene" data-scene="design">
       <div class="copy reveal">
         <p class="label" style="--i:0">Design the lighting</p>
-        <h2 style="--i:1">Tap the house. <em>Light it.</em></h2>
+        <h2 style="--i:1">Choose <em>what comes on.</em></h2>
         <div class="layers" role="group" aria-label="Lighting" style="--i:2">
           <button type="button" data-layer="path" aria-pressed="true">Path and landscape</button>
           <button type="button" data-layer="stone" aria-pressed="false">Stone uplights</button>
           <button type="button" data-layer="eaves" aria-pressed="false">Soffit downlights</button>
           <button type="button" data-layer="holiday" aria-pressed="false">Holiday lights</button>
         </div>
-        <p class="body layer-note" aria-live="polite" style="--i:3">Tap a light on the house, or use the switches. Path lights and the lantern are on to start.</p>
+        <p class="body layer-note" aria-live="polite" style="--i:3">Switch each layer on or off, in any combination. Path and landscape lighting is on to start.</p>
         <div class="options" data-holiday-options hidden style="--i:4">
           <div class="swatches" role="group" aria-label="Holiday light colour">
             <button type="button" data-palette="warm" aria-pressed="true"><span style="background:#ffcf8a"></span>Warm white</button>
@@ -72,7 +65,7 @@ import { site } from '../config/site';
   <script is:inline define:vars={{ email: site.email, minimum: site.holidayMinimum }}>
     (function () {
       var NOTES = {
-        path: 'Path lights along the flagstones, the lantern by the steps, and the shrubs picked out from below.',
+        path: 'Path lights along the flagstones, with the shrubs and planting picked out from below.',
         stone: 'Uplights graze the stone from its base, so every course comes forward.',
         eaves: 'Downlights tucked into the soffits wash the siding and the stone from above.',
         holiday: 'Roofline, shrubs, wreath and window box: installed, maintained through the season and taken down after it. From $' + minimum + '.',
