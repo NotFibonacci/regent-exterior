@@ -7,17 +7,21 @@ SRC = '/tmp/g/lighting-full.orig.webp'
 im = np.asarray(Image.open(SRC).convert('RGB')).astype(np.float32)
 H, W = im.shape[:2]
 # Glass quads: TL, TR, BR, BL (pixels in the 1400x1050 image).
+# Glass corners (TL, TR, BR, BL) traced on the frame's inner edge; `rail` is
+# where the meeting rail sits (0 = top of glass, 1 = bottom); `clip` stops the
+# repaint where planting covers the window.
 WINDOWS = [
-    [(838, 284), (912, 279), (912, 384), (838, 389)],   # front gable
-    [(862, 568), (937, 568), (937, 697), (862, 697)],   # stone front
-    [(651, 386), (676, 386), (676, 462), (651, 462)],   # dormer
-    [(309, 598), (331, 598), (328, 676), (309, 676)],   # left wing A
-    [(372, 598), (396, 598), (396, 681), (370, 681)],   # left wing B
+    dict(q=[(840.7, 290.8), (911.0, 275.9), (911.0, 379.8), (837.3, 387.7)], rail=0.57),   # front gable
+    dict(q=[(865.7, 566.0), (935.8, 562.5), (937.5, 695.0), (860.7, 696.2)], rail=0.50),   # stone front
+    dict(q=[(651.0, 379.5), (678.0, 376.0), (677.0, 460.0), (649.5, 462.0)], rail=0.48,
+         exclude=[(656, 368), (692, 368), (692, 386.5), (656, 382.5)]),  # dormer (roof trim excluded)
+    dict(q=[(309.0, 598.0), (331.0, 598.0), (327.0, 686.0), (308.0, 686.0)], rail=0.50, clip=675),  # left wing A
+    dict(q=[(372.3, 593.0), (398.7, 593.0), (397.0, 686.0), (370.6, 686.0)], rail=0.50, clip=681),  # left wing B
 ]
 out = im.copy()
 SS = 4  # draw lines supersampled for anti-aliasing
-for q in WINDOWS:
-    q = np.array(q, np.float32)
+for win in WINDOWS:
+    q = np.array(win['q'], np.float32)
     x0, y0 = q.min(0).astype(int) - 3; x1, y1 = q.max(0).astype(int) + 4
     patch = im[y0:y1, x0:x1].copy()
     # Glass without the old muntins: a wide median keeps reflections and the
@@ -37,19 +41,27 @@ for q in WINDOWS:
     ring = im[max(0, y0 - 6):y1 + 6, max(0, x0 - 6):x1 + 6].reshape(-1, 3)
     lum = ring.mean(1); frame = ring[lum >= np.percentile(lum, 88)].mean(0) * 0.92
     lines = np.zeros((ph * SS, pw * SS), np.uint8)
-    def P(u, v):  # bilinear point inside the quad, u across, v down
-        top = qm[0] + (qm[1] - qm[0]) * u; bot = qm[3] + (qm[2] - qm[3]) * u
-        return ((top + (bot - top) * v) * SS)
+    # True perspective: map the unit square onto the glass quad.
+    Hm = cv2.getPerspectiveTransform(np.float32([[0, 0], [1, 0], [1, 1], [0, 1]]), np.float32(qm * SS))
+    def P(u, v):
+        x, y, w = Hm @ np.array([u, v, 1.0])
+        return np.int32(np.round([x / w, y / w]))
     wpx = max(1.4, (q[1][0] - q[0][0]) / 40)
     t = int(round(wpx * SS))
-    for u in (1 / 3, 2 / 3):                       # 3 lites across
-        cv2.line(lines, tuple(np.int32(P(u, 0))), tuple(np.int32(P(u, 1))), 255, t, cv2.LINE_AA)
-    for v in (0.25, 0.75):                         # 2 lites high per sash
-        cv2.line(lines, tuple(np.int32(P(0, v))), tuple(np.int32(P(1, v))), 255, t, cv2.LINE_AA)
-    cv2.line(lines, tuple(np.int32(P(0, 0.5))), tuple(np.int32(P(1, 0.5))), 255, int(t * 2.4), cv2.LINE_AA)  # meeting rail
+    r = win['rail']
+    for u in (1 / 3, 2 / 3):                                 # 3 lites across
+        cv2.line(lines, tuple(P(u, 0)), tuple(P(u, 1)), 255, t, cv2.LINE_AA)
+    for v in (r / 2, r + (1 - r) / 2):                       # 2 lites high per sash
+        cv2.line(lines, tuple(P(0, v)), tuple(P(1, v)), 255, t, cv2.LINE_AA)
+    cv2.line(lines, tuple(P(0, r)), tuple(P(1, r)), 255, int(t * 2.4), cv2.LINE_AA)  # meeting rail
     lines = cv2.resize(lines, (pw, ph), interpolation=cv2.INTER_AREA).astype(np.float32)[..., None] / 255
     shade = np.linspace(1.0, 0.8, ph)[:, None, None]  # rails catch less soffit light lower down
     newp = glass * (1 - lines) + frame * shade * lines
+    if 'clip' in win: mask[max(0, win['clip'] - y0):] = 0
+    if 'exclude' in win:
+        ex = np.zeros((ph * SS, pw * SS), np.uint8)
+        cv2.fillPoly(ex, [np.round((np.float32(win['exclude']) - [x0, y0]) * SS).astype(np.int32)], 255)
+        mask *= 1 - cv2.resize(ex, (pw, ph), interpolation=cv2.INTER_AREA).astype(np.float32)[..., None] / 255
     out[y0:y1, x0:x1] = patch * (1 - mask) + newp * mask
 full = Image.fromarray(out.clip(0, 255).astype(np.uint8))
 full.save('public/img/lighting-full.webp', quality=88, method=6)
@@ -67,5 +79,5 @@ def recut(orig, dst):
     box = (x, y, x + ob.width * s, y + ob.height * s)
     full.crop(tuple(round(v) for v in box)).resize(ob.size, Image.LANCZOS).save(dst, quality=88, method=6)
     print(dst, round(mv, 3), round(s, 3), box)
-recut('/tmp/g/lighting-stone.orig.webp', 'public/img/lighting-stone.webp')
-recut('/tmp/g/lighting-path.orig.webp', 'public/img/lighting-path.webp')
+full.crop((677, 291, 1257, 735)).resize((1000, 766), Image.LANCZOS).save('public/img/lighting-stone.webp', quality=88, method=6)
+# lighting-path.webp comes from a different render and is left untouched.

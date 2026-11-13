@@ -34,7 +34,6 @@ export const divisions: Division[] = [
       { src: '/img/windows-bay.webp', alt: 'Bright bay of tall divided-lite windows wrapping a room, with trees outside', caption: 'A full bay of divided-lite windows, set into the curve of the room.', w: 536, h: 420 },
       { src: '/img/windows-interior.webp', alt: 'Double-height living room with tall grid windows and French doors filling the room with low sun', caption: 'Tall grid windows and French doors: the reason the room is built around them.', w: 596, h: 384 },
       { src: '/img/windows-picture.webp', alt: 'Wide white picture and casement windows looking out over a garden and pool', caption: 'Wide picture and casement units that frame the garden, not the sash.', w: 522, h: 416 },
-      { src: '/img/windows-black.webp', alt: 'Black-framed grid window and matching glass door on a porch with board and batten siding and stone', caption: 'Black frames against board and batten and stone, window and door matched.', w: 400, h: 332 },
     ],
     description: 'Window replacement for Central Maryland homes: double-hung, casement and picture windows, measured to the opening and trimmed to match. MHIC #41139.',
     services: [
