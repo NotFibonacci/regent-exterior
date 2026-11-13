@@ -116,6 +116,9 @@ void main() {
     vec3 lit = max(max(lp.rgb * on.x, ls.rgb * on.y), max(le.rgb * on.z, lh.rgb * on.w));
     float w = max(max(lp.a * on.x, ls.a * on.y), max(le.a * on.z, lh.a * on.w));
     nightCol = mix(base, lit, w) * (1.0 + 0.08 * max(max(uOn.x, uOn.y), max(uOn.z, uOn.w)) * w - 0.08 * w);
+    // With holiday lights on, the rest of the night drops a little darker so
+    // the bulbs carry the picture, as they do to the eye.
+    nightCol *= mix(1.0, 0.72, on.w * (1.0 - lh.a * on.w));
     // Settled snow keeps the shading of what lies under it and throws light back.
     float nl = luma(nightCol);
     nightCol = mix(nightCol, mix(vec3(0.085, 0.10, 0.15) * (0.55 + 6.0 * nl), nightCol * 2.2 + 0.02, smoothstep(0.02, 0.2, nl) * w), sn);

@@ -82,30 +82,41 @@ for k in L:
         w*=1-cv2.GaussianBlur(pm,(0,0),2)
     w*=(1-mailbox)
     masks[k]=w
-# The holiday mockup also has the path and stone lighting switched on. The
-# holiday layer keeps only its own lights: strings, nets, wreath and box.
+# Holiday layer: only its own lights, at full strength. The mask is built
+# from the bulbs themselves (strong local peaks, widened to take in each
+# bulb's glow on the fascia), plus the net-lit shrubs and the window box.
 hl=lumf(np.clip(L['holiday']-mn,0,None)); hb=cv2.GaussianBlur(hl,(0,0),1.0)
-# Near a bulb: around detected bulb centres only, so an uplight's wash is
-# never mistaken for string lights.
-pk=((hb==cv2.dilate(hb,np.ones((5,5),np.uint8)))&((hb-cv2.GaussianBlur(hl,(0,0),7))>0.16)&(hb>0.3)).astype(np.float32)
-near=np.clip(cv2.GaussianBlur(pk,(0,0),5)*30,0,1)
-masks['holiday']*=1-np.maximum(masks['path'],masks['stone'])*(1-near)
-# Holiday lights go on the house and the bushes only: never on the lawn,
-# the walkway, the steps or the low planting along the path.
+pk=((hb==cv2.dilate(hb,np.ones((5,5),np.uint8)))&((hb-cv2.GaussianBlur(hl,(0,0),7))>0.08)&(hb>0.15)).astype(np.float32)
+# Stone texture throws false peaks: bulbs are only looked for off the walls.
+walls=np.zeros((H,W),np.float32)
+for (x0,y0,x1,y1) in [(738,578,1162,910),(612,412,738,602),(1170,580,1260,890),(276,592,472,860),(1186,560,1340,880)]: cv2.rectangle(walls,(x0,y0),(x1,y1),1,-1)
+pk*=1-walls
+near=np.clip(cv2.GaussianBlur(pk,(0,0),3.5)*40,0,1)
+near=np.maximum(near,np.clip(cv2.GaussianBlur(pk,(0,0),9)*60,0,1)*0.85)
+plants=np.zeros((H,W),np.float32)
+cv2.ellipse(plants,(262,780),(178,92),0,0,360,1,-1); cv2.ellipse(plants,(772,690),(84,96),0,0,360,1,-1); cv2.ellipse(plants,(160,700),(66,34),0,0,360,1,-1)
+cv2.rectangle(plants,(815,385),(990,470),1,-1)
+plants=cv2.GaussianBlur(plants,(0,0),4)*np.clip(hl/0.02,0,1)
+masks['holiday']=np.clip(np.maximum(near,plants),0,1)*(1-sky[...,0])*(1-mailbox)
+# Never on the lawn, walk, steps or low planting; never on the door.
+gk=np.zeros((H,W),np.float32)
+cv2.fillPoly(gk,[np.array([(0,872),(452,868),(468,792),(712,792),(726,872),(1448,900),(1448,1086),(0,1086)],np.int32)],1)
+cv2.rectangle(gk,(626,594),(714,792),1,-1)
+shr=np.zeros((H,W),np.float32); cv2.ellipse(shr,(262,780),(178,92),0,0,360,1,-1); cv2.ellipse(shr,(772,690),(84,96),0,0,360,1,-1)
+masks['holiday']*=cv2.GaussianBlur(np.clip(1-gk+shr,0,1),(0,0),3)
+# Stone uplights: no ground lights. The two post lights and the glow in the
+# bed below the wall belong to the path layer.
 ground=np.zeros((H,W),np.float32)
-cv2.fillPoly(ground,[np.array([(0,872),(452,868),(468,792),(712,792),(726,872),(1448,900),(1448,1086),(0,1086)],np.int32)],1)
-shrubs=np.zeros((H,W),np.float32)
-cv2.ellipse(shrubs,(262,780),(178,92),0,0,360,1,-1)   # the big shrub
-cv2.ellipse(shrubs,(772,690),(84,96),0,0,360,1,-1)    # the clipped tree
-cv2.ellipse(shrubs,(160,700),(66,34),0,0,360,1,-1)    # hedge behind it
-keep=np.clip(1-ground+shrubs,0,1)
-masks['holiday']*=cv2.GaussianBlur(keep,(0,0),4)
-# The door stays the real door in every state (the holiday mockup repainted it).
-a=np.zeros((H,W),np.float32); cv2.rectangle(a,(626,594),(714,792),1,-1); masks['holiday']*=1-cv2.GaussianBlur(a,(0,0),3)
+cv2.fillPoly(ground,[np.array([(560,905),(700,890),(1448,880),(1448,1086),(560,1086)],np.int32)],1)
+for (x0,y0,x1,y1) in [(608,832,652,898),(664,846,708,908),(1026,866,1072,952),(1052,884,1074,910)]: cv2.rectangle(ground,(x0,y0),(x1,y1),1,-1)
+masks['stone']*=1-cv2.GaussianBlur(ground,(0,0),5)
 for k in L:
     w=masks[k]
     layers[k]=np.clip(L[k]-mn,0,None)*w[...,None]
-    rgba=np.dstack([enc(L[k]),(np.clip(w,0,1)*255).astype(np.uint8)])
+    src=L[k]
+    if k=='holiday':
+        src=L[k]+np.clip(L[k]-mn,0,None)*1.1*near[...,None]
+    rgba=np.dstack([enc(src),(np.clip(w,0,1)*255).astype(np.uint8)])
     Image.fromarray(rgba,'RGBA').save(OUT+f'light-{k}.webp',quality=90,method=6,exact=True)
 Image.fromarray(enc(base)).save(OUT+'base.webp',quality=92,method=6)
 Image.fromarray(real).save(OUT+'real.webp',quality=86,method=6)
