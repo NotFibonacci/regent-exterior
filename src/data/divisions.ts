@@ -67,7 +67,7 @@ export const divisions: Division[] = [
     galleryTitle: 'Finished to <em>match the trim.</em>',
     gallery: [
       { src: '/img/gutters-white.webp', alt: 'White seamless gutter and downspout under a white soffit against red brick', caption: 'White on brick: gutter, downspout and soffit in one colour so the roofline reads clean.', w: 1040, h: 586 },
-      { src: '/img/gutters-dark.webp', alt: 'Charcoal gutters and downspout on a modern house with cedar cladding', caption: 'Charcoal on a modern facade: the gutter runs as a line, not an afterthought.', w: 1384, h: 602 },
+      { src: '/img/gutters-dark-crop.webp', alt: 'Charcoal gutters and downspout on a modern house with cedar cladding', caption: 'Charcoal on a modern facade: the gutter runs as a line, not an afterthought.', w: 1040, h: 586 },
     ],
     description: 'Seamless gutter and downspout installation for Central Maryland homes, sized to the roof and pitched to drain. Gutter guards and repairs. MHIC #41139.',
     services: [
@@ -95,7 +95,8 @@ export const divisions: Division[] = [
     h1: 'Siding and stone, <em>straight and true.</em>',
     lede: 'Lap siding, shakes, board and batten and stone veneer, installed with even courses, tight corners and clean transitions from one material to the next.',
     image: '/img/siding-house.webp',
-    imageAlt: 'Two-storey house in grey lap siding with white trim, a covered patio and a dormer',
+    imageAlt: 'Victorian house with new grey lap siding, blue scalloped shingles in the gable, blue window trim and a white wraparound porch',
+    heroAspect: '3 / 2',
     description: 'Siding and stone veneer for Central Maryland homes: lap siding, shakes, board and batten, ledgestone and fieldstone facades, with flashed transitions. MHIC #41139.',
     services: [
       { name: 'Lap siding', text: 'Fibre cement and vinyl lap siding, from narrow clapboard to Dutch lap, run level with even exposures.' },
@@ -143,9 +144,9 @@ export const divisions: Division[] = [
     title: 'Entry and exterior door replacement in Central Maryland',
     h1: 'The front door, <em>done properly.</em>',
     lede: 'Entry, storm and patio doors hung square, sealed tight and trimmed to suit the house they open into.',
-    image: '/img/doors-navy.webp',
-    imageAlt: 'Dark navy six-panel front door with two glazed lights in a white classical surround with a cornice above stone steps',
-    heroAspect: '410 / 572',
+    image: '/img/doors-entry.webp',
+    imageAlt: 'Wood plank front door with glass sidelights and transom between stacked-stone columns under a covered entry',
+    heroAspect: '892 / 580',
     swatchSets: [
       { id: 'door-styles', label: 'Panel styles', title: 'Start with <em>the panels.</em>', body: 'The panel layout sets the character of a door before colour or hardware. These are the patterns most homes here are built around; each comes in fibreglass, steel or wood.', tall: true, items: [
         { src: '/img/door-style-1.webp', name: 'Three-panel', text: 'One tall raised panel over two. Formal and balanced.' },
@@ -158,8 +159,9 @@ export const divisions: Division[] = [
     ],
     galleryTitle: 'An entry, <em>framed.</em>',
     gallery: [
-      { src: '/img/doors-coral.webp', alt: 'Coral six-panel front door with full-height sidelights in white trim set into red brick', caption: 'Full-height sidelights on both sides turn a door into an entrance.', w: 354, h: 452 },
-      { src: '/img/doors-red.webp', alt: 'Deep red six-panel front door with a single sidelight and black hardware against white siding', caption: 'A single sidelight and dark hardware: a strong colour, kept simple.', w: 372, h: 534 },
+      { src: '/img/doors-navy.webp', alt: 'Dark navy six-panel front door with two glazed lights in a white classical surround above stone steps', caption: 'A classical surround and cornice give a plain door real presence.', w: 360, h: 480 },
+      { src: '/img/doors-coral.webp', alt: 'Coral six-panel front door with full-height sidelights in white trim set into red brick', caption: 'Full-height sidelights on both sides turn a door into an entrance.', w: 360, h: 480 },
+      { src: '/img/doors-red.webp', alt: 'Deep red six-panel front door with a single sidelight and black hardware against white siding', caption: 'A single sidelight and dark hardware: a strong colour, kept simple.', w: 360, h: 480 },
     ],
     description: 'Entry, storm and patio door replacement for Central Maryland homes, hung square and sealed, with matched trim and hardware. MHIC #41139.',
     services: [
