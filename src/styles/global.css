@@ -522,3 +522,21 @@ body.page .reveal > * { opacity: 1; transform: none; }
   [data-scene='design'] .copy:has([data-holiday-options]:not([hidden])) > h2 { display: none; }
 }
 [data-scene='design'] .copy { padding-top: 84px; }
+
+/* ---------- Running-cost calculator ---------- */
+.energy-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 40px); align-items: start; }
+.energy-inputs { display: grid; gap: 10px; }
+.erow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--slate); }
+.erow label { font-size: 15px; color: var(--cream); display: inline-flex; gap: 10px; align-items: center; cursor: pointer; }
+.erow input[type='checkbox'] { accent-color: var(--brass); width: 16px; height: 16px; }
+.erow select, .erow input[type='number'] {
+  font: 400 15px var(--sans); color: var(--cream); background: var(--ink); border: 1px solid var(--line); border-radius: 2px; padding: 8px 10px; min-width: 120px;
+}
+.erow input[type='number'] { width: 110px; min-width: 0; }
+.energy-out { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 24px; border: 1px solid var(--brass); }
+.e-num { font-family: var(--serif); font-weight: 300; font-size: clamp(36px, 3vw + 16px, 60px); line-height: 1; color: var(--cream); margin-top: 6px; }
+.e-break { grid-column: 1 / -1; list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.e-break li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--stone); border-top: 1px solid var(--line); padding-top: 6px; }
+.e-break li span:last-child { color: var(--cream); text-align: right; }
+.energy-out .fine { grid-column: 1 / -1; font-size: 12px; color: var(--stone); }
+@media (max-width: 900px) { .energy-grid { grid-template-columns: 1fr; } }

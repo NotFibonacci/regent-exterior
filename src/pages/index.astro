@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PhotoStage from '../scene/PhotoStage.tsx';
 import LeadForm from '../components/LeadForm.astro';
+import EnergyCalc from '../components/EnergyCalc.astro';
 import { site } from '../config/site';
 import { divisions } from '../data/divisions';
 import { counties } from '../data/counties';
@@ -72,6 +73,8 @@ const LAYERS = [
         {divisions.map((d) => <a class="card link" href={`/${d.slug}/`}><h3>{d.brand.replace('Exterior ', '')}</h3><p>{d.lede}</p></a>)}
       </div>
     </section>
+
+    <EnergyCalc sync />
 
     <section class="section split">
       <div class="sec-head"><p class="label">How it works</p><h2>From a walk at dusk <em>to a lit house.</em></h2></div>

@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import PageHero from '../../components/PageHero.astro';
 import Faq from '../../components/Faq.astro';
 import LeadForm from '../../components/LeadForm.astro';
+import EnergyCalc from '../../components/EnergyCalc.astro';
 import { counties } from '../../data/counties';
 
 const faqs = [
@@ -10,6 +11,7 @@ const faqs = [
   { q: 'What colour of light do you use?', a: 'Warm white, close to the glow of a lamp indoors. It flatters stone, brick and siding and sits comfortably next to porch and window light. Cooler and colour-changing fixtures are available if you want them.' },
   { q: 'Will it light up my neighbours or the sky?', a: 'It should not. We aim fixtures at the house, trees and paths, shield them, and keep brightness low. Good outdoor lighting is noticed for what it shows, not for glare.' },
   { q: 'How are the lights powered and controlled?', a: 'Low-voltage fixtures run from a transformer plugged into an outdoor outlet, so there is no high-voltage wiring in the garden. Lights come on at dusk and go off on a schedule you choose.' },
+  { q: 'What does it cost to run?', a: 'Very little. LED low-voltage fixtures draw a few watts each, so a full front-of-house design on a dusk-to-11 pm timer typically costs a few dollars a month at Maryland rates. Use the running-cost calculator on this page for your own numbers.' },
   { q: 'Do you offer packages?', a: 'Each part of the design, such as path and landscape, uplighting on the walls, and soffit downlights, comes in three levels, from the essentials to the full design. You can see all of them on our home page and mix them as you like.' },
 ];
 const schema = [
@@ -56,6 +58,8 @@ const parts = [
         <article class="card"><h3>Tier 3</h3><p>The full design: planting, corners, gable peaks and the sides of the house.</p></article>
       </div>
     </section>
+
+    <EnergyCalc />
 
     <Faq faqs={faqs} />
     <LeadForm interest="Architectural and landscape lighting" />

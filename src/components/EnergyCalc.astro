@@ -1,0 +1,74 @@
+---
+import { energy } from '../config/energy';
+interface Props { sync?: boolean }
+const { sync = false } = Astro.props;
+const L = energy.layers;
+---
+<section class="section energy" id="running-cost" data-energy data-sync={sync ? 'true' : undefined}>
+  <div class="sec-head">
+    <p class="label">Running cost</p>
+    <h2>What it costs <em>to keep it lit.</em></h2>
+    <p class="body">LED low-voltage lighting uses very little power. Pick what you would have and how long it stays on, and see the cost at Maryland electricity rates.</p>
+  </div>
+  <div class="energy-grid">
+    <div class="energy-inputs">
+      {Object.entries(L).map(([id, l]) => (
+        <div class="erow">
+          <label class="check"><input type="checkbox" data-e-layer={id} checked={id !== 'holiday'} /><span>{l.name}</span></label>
+          <select data-e-tier={id} aria-label={`${l.name} level`}><option value="1">Tier 1</option><option value="2">Tier 2</option><option value="3" selected>Tier 3</option></select>
+        </div>
+      ))}
+      <div class="erow">
+        <label for="e-sched">Lights on</label>
+        <select id="e-sched" data-e-sched>{Object.entries(energy.schedules).map(([k, s]) => <option value={k}>{s.label}</option>)}</select>
+      </div>
+      <div class="erow">
+        <label for="e-rate">Your rate, cents per kWh</label>
+        <input id="e-rate" type="number" step="0.1" min="1" max="99" value={(energy.rate * 100).toFixed(1)} inputmode="decimal" data-e-rate />
+      </div>
+    </div>
+    <div class="energy-out" aria-live="polite">
+      <div class="e-big"><p class="label">Per month, year-round lights</p><p class="e-num" data-e-month>$0</p></div>
+      <div class="e-big"><p class="label">Per year, everything</p><p class="e-num" data-e-year>$0</p></div>
+      <ul class="e-break" data-e-break></ul>
+      <p class="fine">Estimates for LED fixtures on a timer, including transformer losses. Holiday lights are counted for {energy.holidayNights} nights, {energy.holidayHours} hours a night. Default rate: {energy.rateSource}, {(energy.rate * 100).toFixed(1)}¢ per kWh; check your bill for your own.</p>
+    </div>
+  </div>
+</section>
+
+<script is:inline define:vars={{ E: energy }}>
+  (function () {
+    var root = document.querySelector('[data-energy]');
+    if (!root) return;
+    var $ = function (s) { return root.querySelector(s); };
+    var money = function (n) { return n < 10 ? '$' + n.toFixed(2) : '$' + Math.round(n).toLocaleString('en-US'); };
+    var calc = function () {
+      var rate = (Number($('[data-e-rate]').value) || E.rate * 100) / 100;
+      var hours = E.schedules[$('[data-e-sched]').value].hours;
+      var month = 0, year = 0, rows = [];
+      Object.keys(E.layers).forEach(function (id) {
+        if (!$('[data-e-layer="' + id + '"]').checked) return;
+        var t = Number($('[data-e-tier="' + id + '"]').value);
+        var items = E.layers[id].tiers[t - 1];
+        var watts = items.reduce(function (a, i) { return a + i.n * i.w; }, 0) * E.transformerLoss;
+        var y, m;
+        if (id === 'holiday') { y = watts * E.holidayHours * E.holidayNights / 1000 * rate; m = watts * E.holidayHours * 30 / 1000 * rate; }
+        else { y = watts * hours * 365 / 1000 * rate; m = y / 12; }
+        month += id === 'holiday' ? 0 : m; year += y;
+        rows.push('<li><span>' + E.layers[id].name + ' · tier ' + t + '</span><span>' + Math.round(watts) + ' W · ' + money(y) + ' a year' + (id === 'holiday' ? ' (' + money(m) + ' in December)' : '') + '</span></li>');
+      });
+      $('[data-e-month]').textContent = money(month);
+      $('[data-e-year]').textContent = money(year);
+      $('[data-e-break]').innerHTML = rows.join('') || '<li><span>Nothing selected</span><span></span></li>';
+    };
+    root.addEventListener('input', calc);
+    root.addEventListener('change', calc);
+    // On the home page the calculator follows the design panel above it.
+    if (root.dataset.sync) {
+      window.addEventListener('regent:lights', function (e) { var b = $('[data-e-layer="' + e.detail.layer + '"]'); if (b) { b.checked = e.detail.on; calc(); } });
+      window.addEventListener('regent:tier', function (e) { var s = $('[data-e-tier="' + e.detail.layer + '"]'); if (s) { s.value = String(e.detail.tier); calc(); } });
+      document.querySelectorAll('.layers [data-layer]').forEach(function (b) { var c = $('[data-e-layer="' + b.dataset.layer + '"]'); if (c) c.checked = b.getAttribute('aria-pressed') === 'true'; });
+    }
+    calc();
+  })();
+</script>
