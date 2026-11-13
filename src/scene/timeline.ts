@@ -15,8 +15,7 @@ export const state = {
 const LAYERS: Record<string, number[]> = {
   path: [0],
   stone: [1],
-  siding: [2],
-  roofline: [3],
+  eaves: [3],
   holiday: [4],
 };
 

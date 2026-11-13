@@ -252,3 +252,30 @@ main a, main button { pointer-events: auto; }
   [data-scene='design'] .copy:has([data-holiday-options]:not([hidden])) > h2 { display: none; }
   [data-scene='design'] .options { gap: 8px; }
 }
+
+/* Switches on the house itself: a small lamp you tap to light that part. */
+.spots { position: fixed; inset: 0; z-index: 14; pointer-events: none; opacity: 0; transition: opacity 600ms var(--ease); }
+.spots.live { opacity: 1; }
+.spot {
+  position: absolute; left: 0; top: 0; margin: -22px 0 0 -22px; padding: 0;
+  width: 44px; height: 44px; border: 0; background: none; cursor: pointer; pointer-events: none;
+  display: grid; place-items: center; color: var(--cream);
+}
+.spots.live .spot { pointer-events: auto; }
+.spot i {
+  width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--cream);
+  background: rgba(8, 9, 11, 0.55); transition: background 480ms var(--ease), box-shadow 480ms var(--ease), border-color 480ms var(--ease);
+}
+.spot i::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px;
+  border-radius: 50%; border: 1px solid var(--cream); animation: ping 2.4s var(--ease) infinite;
+}
+.spot[aria-pressed='true'] i { background: var(--lamp); border-color: var(--lamp); box-shadow: 0 0 16px 4px rgba(255, 169, 87, 0.7); }
+.spot[aria-pressed='true'] i::after { animation: none; opacity: 0; }
+.spot span {
+  position: absolute; left: 38px; top: 50%; transform: translateY(-50%); white-space: nowrap;
+  font-family: var(--caps); font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+  padding: 4px 7px; background: rgba(8, 9, 11, 0.6); border-radius: 2px;
+}
+@keyframes ping { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(2.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .spot i::after { animation: none; opacity: 0; } }
