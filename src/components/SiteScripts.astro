@@ -108,7 +108,10 @@ const { ga4, metaPixel } = site.analytics;
 
     // ---- Cookies --------------------------------------------------------
     var banner = document.querySelector('[data-cookie-banner]');
-    var consent = (function () { var v = getCookie('regent_consent'); if (!v) return null; var o = {}; v.split('|').forEach(function (p) { var kv = p.split(':'); o[kv[0]] = kv[1] === '1'; }); return o; })();
+    // The choice is kept in a cookie and, as a backup, in local storage: inside
+    // embedded previews (and some privacy browsers) cookies are blocked.
+    var stored = function () { var v = getCookie('regent_consent'); if (!v) { try { v = localStorage.getItem('regent_consent'); } catch (e) {} } return v; };
+    var consent = (function () { var v = stored(); if (!v) return null; var o = {}; v.split('|').forEach(function (p) { var kv = p.split(':'); o[kv[0]] = kv[1] === '1'; }); return o; })();
     var loaded = {};
     var apply = function (c) {
       if (c.analytics) {
@@ -136,7 +139,7 @@ const { ga4, metaPixel } = site.analytics;
       document.querySelectorAll('[data-lead-source]').forEach(function (i) { i.value = src; });
       document.querySelectorAll('form[data-netlify]').forEach(function (f) { f.addEventListener('submit', function () { if (window.gtag && GA4) gtag('event', 'generate_lead', { form: f.getAttribute('name') }); if (window.fbq && PIXEL) fbq('track', 'Lead'); }); });
     };
-    var save = function (c) { setCookie('regent_consent', 'analytics:' + (c.analytics ? 1 : 0) + '|marketing:' + (c.marketing ? 1 : 0), 180); banner.classList.remove('in'); setTimeout(function () { banner.hidden = true; }, 400); window.dispatchEvent(new Event('regent:consent')); apply(c); };
+    var save = function (c) { var v = 'analytics:' + (c.analytics ? 1 : 0) + '|marketing:' + (c.marketing ? 1 : 0); setCookie('regent_consent', v, 180); try { localStorage.setItem('regent_consent', v); } catch (e) {} consent = c; window.regentConsentGiven = true; banner.classList.remove('in'); setTimeout(function () { banner.hidden = true; }, 400); window.dispatchEvent(new Event('regent:consent')); apply(c); };
     var show = function () { banner.hidden = false; requestAnimationFrame(function () { banner.classList.add('in'); }); };
     if (banner) {
       banner.querySelector('[data-cookie-accept]').addEventListener('click', function () { save({ analytics: true, marketing: true }); });
