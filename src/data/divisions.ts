@@ -130,7 +130,7 @@ export const divisions: Division[] = [
     ],
     galleryTitle: 'What a new facade <em>changes.</em>',
     gallery: [
-      { src: '/img/siding-before-after.webp', alt: 'One window shown half with new pale green lap siding and half with old peeling painted boards', caption: 'Before and after, on one wall: new lap siding and trim beside the worn boards it replaces.', w: 674, h: 462 },
+      { src: '/img/siding-before-after.webp', alt: 'One window with old peeling painted boards on the left half and new pale green lap siding on the right half', caption: 'Before and after, on one wall: worn boards on the left, new lap siding and trim on the right.', w: 674, h: 462 },
     ],
     faqs: [
       { q: 'Fiber cement or vinyl?', a: 'Fiber cement holds a crisp line and takes paint; vinyl needs less upkeep. We walk you through both against your house and budget.' },

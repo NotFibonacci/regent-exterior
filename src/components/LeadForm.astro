@@ -19,6 +19,7 @@ const services = ['Architectural and landscape lighting', 'Holiday lighting', 'W
     <form class="form" name="request" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
       <input type="hidden" name="form-name" value="request" />
       <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+        <input type="hidden" name="lead_source" data-lead-source value="" />
       <input type="hidden" name="design" data-design-field value="" />
       <div class="row">
         <label>Name<input name="name" autocomplete="name" required /></label>

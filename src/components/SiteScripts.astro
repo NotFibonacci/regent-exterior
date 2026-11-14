@@ -1,0 +1,156 @@
+---
+// Site-wide behaviour: menu links open at the top, a warm light follows the
+// cursor, unfinished forms are guarded, and cookies wait for consent.
+import { site } from '../config/site';
+const { ga4, metaPixel } = site.analytics;
+---
+<div class="cursor-light" aria-hidden="true"></div>
+
+<div class="leave-guard" data-leave-guard hidden role="dialog" aria-modal="true" aria-labelledby="leave-guard-title">
+  <div class="lg-card">
+    <p class="label">Your request is not sent yet</p>
+    <h2 id="leave-guard-title">Complete your form?</h2>
+    <p>You have started filling in a request. If you leave now, what you entered will be lost.</p>
+    <div class="lg-actions">
+      <button type="button" class="btn solid" data-guard-stay>Complete form</button>
+      <button type="button" class="btn ghost" data-guard-leave>Leave anyway</button>
+    </div>
+  </div>
+</div>
+
+<div class="cookie-banner" data-cookie-banner hidden role="region" aria-label="Cookie choices">
+  <p>We use cookies to keep the site working, to understand how visitors use it, and to measure our advertising. <a href="/privacy/#cookies">Read more</a></p>
+  <div class="cb-choices" data-cookie-choices hidden>
+    <label class="check"><input type="checkbox" checked disabled /><span>Necessary <small>Always on. Remembers your cookie choice.</small></span></label>
+    <label class="check"><input type="checkbox" data-consent="analytics" /><span>Analytics <small>Visits, pages viewed and how you found us.</small></span></label>
+    <label class="check"><input type="checkbox" data-consent="marketing" /><span>Marketing <small>Measures and improves our ads.</small></span></label>
+  </div>
+  <div class="cb-actions">
+    <button type="button" class="btn solid" data-cookie-accept>Accept all</button>
+    <button type="button" class="btn ghost" data-cookie-necessary>Necessary only</button>
+    <button type="button" class="cb-link" data-cookie-choose>Choose</button>
+    <button type="button" class="btn ghost" data-cookie-save hidden>Save choices</button>
+  </div>
+</div>
+
+<script is:inline define:vars={{ GA4: ga4, PIXEL: metaPixel }}>
+  (function () {
+    var getCookie = function (n) { var m = document.cookie.match('(?:^|; )' + n + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : null; };
+    var setCookie = function (n, v, days) { document.cookie = n + '=' + encodeURIComponent(v) + '; Max-Age=' + days * 86400 + '; Path=/; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : ''); };
+
+    // ---- Menu links always open the page at the top -------------------
+    try { if (sessionStorage.getItem('regent-nav-top') === '1') { sessionStorage.removeItem('regent-nav-top'); if (!location.hash) window.scrollTo(0, 0); } } catch (e) {}
+    document.querySelectorAll('.site-header a, #mobile-menu a, .site-footer a').forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        var url = new URL(a.href, location.href);
+        if (url.origin !== location.origin || url.hash) return;
+        if (url.pathname === location.pathname) { ev.preventDefault(); window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var t = document.querySelector('.menu-toggle'); if (t && t.getAttribute('aria-expanded') === 'true') t.click(); return; }
+        try { sessionStorage.setItem('regent-nav-top', '1'); } catch (e) {}
+      });
+    });
+
+    // ---- A warm light follows the cursor (fine pointers only) ----------
+    var light = document.querySelector('.cursor-light');
+    if (light && matchMedia('(pointer: fine)').matches) {
+      var x = -999, y = -999, raf = 0;
+      var paint = function () { raf = 0; light.style.transform = 'translate3d(' + x + 'px,' + y + 'px,0)'; };
+      window.addEventListener('pointermove', function (e) {
+        x = e.clientX; y = e.clientY;
+        // The night scene on the home page has its own hand lamp.
+        var overStage = e.target && e.target.closest && e.target.closest('#stage, .scene');
+        light.classList.toggle('on', !overStage);
+        if (!raf) raf = requestAnimationFrame(paint);
+      }, { passive: true });
+      document.addEventListener('pointerleave', function () { light.classList.remove('on'); });
+    }
+
+    // ---- Unfinished forms: ask before leaving -------------------------
+    var guard = document.querySelector('[data-leave-guard]');
+    var dirtyForm = null, armed = false, pending = null;
+    var isDirty = function () { return !!dirtyForm; };
+    var filled = function (f) { return [].some.call(f.querySelectorAll('input[type=text], input[type=email], input[type=tel], input:not([type]), textarea'), function (i) { return i.name !== 'bot-field' && i.value.trim() !== ''; }); };
+    document.querySelectorAll('form[data-netlify]').forEach(function (f) {
+      f.addEventListener('input', function () {
+        dirtyForm = filled(f) ? f : (dirtyForm === f ? null : dirtyForm);
+        // One extra history entry so the Back button can be caught.
+        if (dirtyForm && !armed) { history.pushState({ regentGuard: true }, ''); armed = true; }
+      });
+      f.addEventListener('submit', function () { dirtyForm = null; });
+    });
+    var open = function (go) { pending = go; guard.hidden = false; guard.querySelector('[data-guard-stay]').focus(); };
+    var close = function () { guard.hidden = true; pending = null; };
+    if (guard) {
+      guard.querySelector('[data-guard-stay]').addEventListener('click', function () {
+        var f = dirtyForm; close();
+        if (!armed) { history.pushState({ regentGuard: true }, ''); armed = true; }
+        if (f) { var first = [].find.call(f.querySelectorAll('[required]'), function (i) { return !i.value.trim(); }) || f.querySelector('input:not([type=hidden]), textarea'); f.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 500); }
+      });
+      guard.querySelector('[data-guard-leave]').addEventListener('click', function () { var go = pending; dirtyForm = null; close(); if (go) go(); });
+      guard.addEventListener('keydown', function (e) { if (e.key === 'Escape') guard.querySelector('[data-guard-stay]').click(); });
+    }
+    document.addEventListener('click', function (ev) {
+      if (!isDirty() || ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+      var a = ev.target.closest && ev.target.closest('a[href]');
+      if (!a || a.target === '_blank' || dirtyForm.contains(a)) return;
+      var url = new URL(a.href, location.href);
+      if (url.origin === location.origin && url.pathname === location.pathname && url.hash) return;
+      if (/^(mailto|tel):/.test(a.href)) return;
+      ev.preventDefault();
+      open(function () { location.href = a.href; });
+    }, true);
+    window.addEventListener('popstate', function () {
+      if (!armed) return;
+      armed = false;
+      if (isDirty()) open(function () { history.back(); });
+    });
+    // Refresh or closing the tab: browsers only allow their own standard prompt here.
+    window.addEventListener('beforeunload', function (e) { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+    // ---- Cookies --------------------------------------------------------
+    var banner = document.querySelector('[data-cookie-banner]');
+    var consent = (function () { var v = getCookie('regent_consent'); if (!v) return null; var o = {}; v.split('|').forEach(function (p) { var kv = p.split(':'); o[kv[0]] = kv[1] === '1'; }); return o; })();
+    var loaded = {};
+    var apply = function (c) {
+      if (c.analytics) {
+        // First visit source, attached to quote requests so we know which ads and searches bring work.
+        if (!getCookie('regent_src')) {
+          var q = new URLSearchParams(location.search);
+          var ref = document.referrer && new URL(document.referrer).origin !== location.origin ? new URL(document.referrer).hostname : '';
+          setCookie('regent_src', [q.get('utm_source') || ref || 'direct', q.get('utm_medium') || (ref ? 'referral' : 'none'), q.get('utm_campaign') || '', location.pathname, new Date().toISOString().slice(0, 10)].join(' / '), 90);
+        }
+        if (GA4 && !loaded.ga) {
+          loaded.ga = true;
+          var s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA4; document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
+          gtag('js', new Date()); gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: c.marketing ? 'granted' : 'denied', ad_user_data: c.marketing ? 'granted' : 'denied', ad_personalization: c.marketing ? 'granted' : 'denied' });
+          gtag('config', GA4);
+        }
+      }
+      if (c.marketing && PIXEL && !loaded.px) {
+        loaded.px = true;
+        !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', PIXEL); fbq('track', 'PageView');
+      }
+      // Fill the lead source into every form.
+      var src = getCookie('regent_src') || '';
+      document.querySelectorAll('[data-lead-source]').forEach(function (i) { i.value = src; });
+      document.querySelectorAll('form[data-netlify]').forEach(function (f) { f.addEventListener('submit', function () { if (window.gtag && GA4) gtag('event', 'generate_lead', { form: f.getAttribute('name') }); if (window.fbq && PIXEL) fbq('track', 'Lead'); }); });
+    };
+    var save = function (c) { setCookie('regent_consent', 'analytics:' + (c.analytics ? 1 : 0) + '|marketing:' + (c.marketing ? 1 : 0), 180); banner.classList.remove('in'); setTimeout(function () { banner.hidden = true; }, 400); window.dispatchEvent(new Event('regent:consent')); apply(c); };
+    var show = function () { banner.hidden = false; requestAnimationFrame(function () { banner.classList.add('in'); }); };
+    if (banner) {
+      banner.querySelector('[data-cookie-accept]').addEventListener('click', function () { save({ analytics: true, marketing: true }); });
+      banner.querySelector('[data-cookie-necessary]').addEventListener('click', function () { save({ analytics: false, marketing: false }); });
+      banner.querySelector('[data-cookie-choose]').addEventListener('click', function () {
+        banner.querySelector('[data-cookie-choices]').hidden = false;
+        banner.querySelector('[data-cookie-choose]').hidden = true; banner.querySelector('[data-cookie-save]').hidden = false;
+      });
+      banner.querySelector('[data-cookie-save]').addEventListener('click', function () {
+        save({ analytics: banner.querySelector('[data-consent=analytics]').checked, marketing: banner.querySelector('[data-consent=marketing]').checked });
+      });
+      document.querySelectorAll('[data-cookie-settings]').forEach(function (b) { b.addEventListener('click', function (e) { e.preventDefault(); if (consent) { banner.querySelector('[data-consent=analytics]').checked = !!consent.analytics; banner.querySelector('[data-consent=marketing]').checked = !!consent.marketing; } banner.querySelector('[data-cookie-choose]').click(); show(); }); });
+      if (consent) apply(consent); else setTimeout(show, 1200);
+    }
+    window.regentConsentGiven = !!consent;
+  })();
+</script>

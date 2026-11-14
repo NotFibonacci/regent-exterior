@@ -6,6 +6,7 @@ import '@fontsource/marcellus';
 import '../styles/global.css';
 import { site, nav } from '../config/site';
 import { counties } from '../data/counties';
+import SiteScripts from '../components/SiteScripts.astro';
 
 interface Props {
   title: string;
@@ -127,6 +128,7 @@ if (site.address) business.address = site.address;
             <li><a href="/about/">About</a></li>
             <li><a href="/contact/">Contact</a></li>
             <li><a href="/privacy/">Privacy</a></li>
+            <li><a href="/privacy/#cookies" data-cookie-settings>Cookie settings</a></li>
           </ul>
         </div>
       </div>
@@ -162,6 +164,7 @@ if (site.address) business.address = site.address;
         });
       })();
     </script>
+    <SiteScripts />
     <aside class="holiday-toast" data-holiday-toast hidden aria-label="Holiday lighting">
       <a href="/holiday-lighting/"><span class="ht-title">Happy Holidays!</span> Holiday Light Packages starting at ${site.holidayMinimum}</a>
       <button type="button" aria-label="Dismiss" data-holiday-close>&times;</button>
@@ -177,7 +180,9 @@ if (site.address) business.address = site.address;
         var seen = false;
         try { seen = sessionStorage.getItem('regent-holiday-toast') === '1'; } catch (e) {}
         if (!season || seen || location.pathname.indexOf('/holiday-lighting') === 0) return;
-        setTimeout(function () { t.hidden = false; requestAnimationFrame(function () { t.classList.add('in'); }); }, 4500);
+        var reveal = function (ms) { setTimeout(function () { t.hidden = false; requestAnimationFrame(function () { t.classList.add('in'); }); }, ms); };
+        // Wait for the cookie choice first so the two never stack.
+        if (window.regentConsentGiven) reveal(4500); else window.addEventListener('regent:consent', function () { reveal(2500); }, { once: true });
         t.querySelector('[data-holiday-close]').addEventListener('click', function () {
           t.classList.remove('in');
           setTimeout(function () { t.hidden = true; }, 400);

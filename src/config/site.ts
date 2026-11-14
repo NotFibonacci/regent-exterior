@@ -10,6 +10,12 @@ export const site = {
   counties: ['Baltimore', 'Anne Arundel', 'Howard', 'Montgomery', "Prince George's", 'Carroll', 'Frederick'],
   areaLine: "Baltimore, Anne Arundel, Howard, Montgomery, Prince George's, Carroll and Frederick Counties and Baltimore City",
   holidayMinimum: 950,
+  // Tracking IDs. Leave blank to load nothing; each loads only after the
+  // visitor accepts that kind of cookie in the banner.
+  analytics: {
+    ga4: '', // Google Analytics 4 measurement ID, e.g. 'G-XXXXXXXXXX'
+    metaPixel: '', // Meta (Facebook/Instagram) Pixel ID, numbers only
+  },
 } as const;
 
 export const nav = [
