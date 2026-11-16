@@ -637,3 +637,6 @@ body.page .reveal > * { opacity: 1; transform: none; }
 .btn.solid:hover, .btn.ghost:hover { background: var(--lamp); border-color: var(--lamp); color: var(--ink); }
 button.btn { cursor: pointer; }
 [hidden] { display: none !important; }
+
+.weather-now { margin-top: 18px; font-size: 13px; letter-spacing: 0.02em; color: var(--stone); }
+.weather-now::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 9px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 8px var(--lamp); vertical-align: 1px; }

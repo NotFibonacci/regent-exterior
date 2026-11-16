@@ -29,6 +29,7 @@ const LAYERS = [
         <h1 style="--i:1">Your home, <em>after dark.</em></h1>
         <p class="body" style="--i:2">Lighting designed for the house you already have. Scroll down, then choose what comes on.</p>
         <p class="hint" style="--i:3">Move across the house. The light is yours.</p>
+        <p class="weather-now" data-weather-now hidden style="--i:4"></p>
       </div>
     </section>
 
@@ -184,10 +185,9 @@ const LAYERS = [
       });
 
       // Choose for me: the designer's pick for this house, switched on one
-      // layer at a time. In the holiday season it includes the holiday lights.
+      // layer at a time. Holiday lights stay the visitor's own choice.
       document.querySelector('[data-pick]').addEventListener('click', function () {
-        var m = new Date().getMonth();
-        var want = { path: 3, stone: 3, eaves: 2, holiday: (m === 10 || m === 11 || m === 0) ? 3 : 0 };
+        var want = { path: 3, stone: 3, eaves: 2, holiday: 0 };
         var n = 0;
         Object.keys(want).forEach(function (name) {
           setTimeout(function () {
@@ -196,8 +196,18 @@ const LAYERS = [
           }, n++ * 300);
         });
         setTimeout(function () {
-          note.textContent = 'Our pick for this house: path and landscape and stone uplights at tier 3, soffit downlights at tier 2' + (want.holiday ? ', and holiday lights for the season.' : '.');
+          note.textContent = 'Our pick for this house: path and landscape and stone uplights at tier 3, soffit downlights at tier 2.';
         }, n * 300);
+      });
+
+      // Live weather line under the opening copy.
+      var wx = document.querySelector('[data-weather-now]');
+      window.addEventListener('regent:weather', function (e) {
+        var w = e.detail; if (!wx || !w) return;
+        var words = { clear: 'clear skies', cloudy: 'cloudy', fog: 'fog', rain: 'rain', storm: 'thunderstorms', snow: 'snow' };
+        var t = w.kind === 'clear' || w.kind === 'storm' ? words[w.kind] : w.text;
+        wx.textContent = 'In Maryland right now: ' + t + (w.tempF != null ? ', ' + w.tempF + '\u00b0F' : '') + '. The scene follows the weather.';
+        wx.hidden = false;
       });
 
       request.addEventListener('click', refresh);

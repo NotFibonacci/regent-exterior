@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getWeather, type Weather } from './weather';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { startTimeline, state } from './timeline';
@@ -55,6 +56,9 @@ uniform float uMix;       // 0: dusk opening, 1: night scene
 uniform float uIntro;
 uniform vec4 uOn;         // path, stone, eaves, holiday
 uniform float uSnow;
+uniform float uRain;      // live weather: wet ground
+uniform float uFog;
+uniform float uCloud;     // overcast sky
 uniform vec3 uPal[4];
 uniform float uPalN;      // 0 keeps the mockup's own warm white
 uniform vec2 uCur;
@@ -144,6 +148,14 @@ void main() {
     col = mix(paper, col, smoothstep(0.0, 1.0, (1.0 - uIntro) * 1.7 - dr * 0.7));
   }
 
+  // Live Maryland weather. Overcast flattens the sky; rain darkens and cools
+  // the ground while the lights keep their warmth; fog lifts the blacks.
+  float skyM = uMix > 0.5 ? 1.0 - texture2D(tMap, t).a : texture2D(tSky, t).r;
+  float cl = luma(col);
+  col = mix(col, vec3(cl) * vec3(0.92, 0.95, 1.0) * 1.05 + 0.004, uCloud * 0.75 * skyM);
+  col = mix(col, col * vec3(0.82, 0.87, 0.95), uRain * (1.0 - skyM) * (1.0 - smoothstep(0.05, 0.35, cl)));
+  col = mix(col, mix(vec3(0.16, 0.17, 0.2), vec3(0.03, 0.034, 0.042), step(0.5, uMix)) + col * 0.4, uFog * 0.4);
+
   float inside = smoothstep(0.0, 0.14, uv.x) * smoothstep(1.0, 0.97, uv.x) * smoothstep(0.0, 0.03, uv.y) * smoothstep(1.0, 0.94, uv.y);
   inside *= uFrame.x < 0.999 ? 1.0 - smoothstep(0.86, 1.0, yt) : 1.0;
   col = mix(INK, col, inside);
@@ -177,6 +189,34 @@ varying float vA;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   gl_FragColor = vec4(vec3(0.80, 0.86, 1.0) * smoothstep(1.0, 0.2, r) * vA, 1.0);
+  #include <colorspace_fragment>
+}
+`;
+
+// Falling rain: short slanted streaks, same copy exclusion as the snow.
+const rainVertex = /* glsl */ `
+attribute vec3 aSeed;
+uniform float uTime;
+uniform float uRain;
+uniform float uWide;
+uniform float uDpr;
+varying float vA;
+void main() {
+  float depth = aSeed.z;
+  float y = fract(aSeed.y + uTime * mix(0.55, 1.1, depth));
+  float x = fract(aSeed.x + y * 0.06);
+  float keep = uWide > 0.5 ? smoothstep(0.24, 0.44, x) : 1.0 - smoothstep(0.5, 0.66, y);
+  vA = mix(0.05, 0.2, depth) * uRain * keep;
+  gl_Position = vec4(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
+  gl_PointSize = mix(10.0, 28.0, depth) * uDpr;
+}
+`;
+const rainFragment = /* glsl */ `
+varying float vA;
+void main() {
+  vec2 q = gl_PointCoord - 0.5;
+  float streak = smoothstep(0.07, 0.0, abs(q.x + q.y * 0.12)) * smoothstep(0.5, 0.15, abs(q.y));
+  gl_FragColor = vec4(vec3(0.72, 0.8, 0.95) * streak * vA, 1.0);
   #include <colorspace_fragment>
 }
 `;
@@ -231,6 +271,9 @@ export default function PhotoStage() {
       uOn: { value: new THREE.Vector4() },
       uTier: { value: new THREE.Vector4(3, 3, 3, 3) },
       uSnow: { value: 0 },
+      uRain: { value: 0 },
+      uFog: { value: 0 },
+      uCloud: { value: 0 },
       uPal: { value: Array.from({ length: 4 }, () => new THREE.Vector3(1, 1, 1)) },
       uPalN: { value: 0 },
       uCur: { value: new THREE.Vector2(0.8, 0.6) },
@@ -254,6 +297,26 @@ export default function PhotoStage() {
     );
     flakes.frustumCulled = false;
     scene.add(flakes);
+
+    const dropCount = state.reduced ? 0 : coarse ? 300 : 650;
+    const dropGeo = new THREE.BufferGeometry();
+    dropGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(new Float32Array(dropCount * 3).map(() => Math.random()), 3));
+    dropGeo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(dropCount * 3), 3));
+    const rainUniforms = { uTime: flakeUniforms.uTime, uRain: uniforms.uRain, uWide: flakeUniforms.uWide, uDpr: flakeUniforms.uDpr };
+    const drops = new THREE.Points(
+      dropGeo,
+      new THREE.ShaderMaterial({ vertexShader: rainVertex, fragmentShader: rainFragment, uniforms: rainUniforms, transparent: true, blending: THREE.AdditiveBlending, depthTest: false }),
+    );
+    drops.frustumCulled = false;
+    scene.add(drops);
+
+    // Live weather targets, eased in the frame loop.
+    const sky = { rain: 0, snow: 0, fog: 0, cloud: 0 };
+    getWeather().then((w: Weather | null) => {
+      if (!alive || !w) return;
+      Object.assign(sky, { rain: w.rain, snow: w.snow, fog: w.fog, cloud: w.cloud });
+      window.dispatchEvent(new CustomEvent('regent:weather', { detail: w }));
+    });
 
     // Tier per layer, eased so lights come and go rather than snap.
     const tierOrder = ['path', 'stone', 'eaves', 'holiday'];
@@ -349,8 +412,13 @@ export default function PhotoStage() {
 
       uniforms.uMix.value = state.night;
       uniforms.uOn.value.set(state.groups[G.path], state.groups[G.stone], state.groups[G.eaves], state.groups[G.holiday]);
-      const snowTarget = choice.snow ? Math.min(1, state.groups[G.holiday]) : 0;
-      uniforms.uSnow.value += (snowTarget - uniforms.uSnow.value) * (state.reduced ? 1 : 1 - Math.exp(-dt * 0.9));
+      // Snow follows the holiday choice or the real weather, whichever is more.
+      const snowTarget = Math.max(choice.snow ? Math.min(1, state.groups[G.holiday]) : 0, sky.snow);
+      const wxEase = state.reduced ? 1 : 1 - Math.exp(-dt * 0.9);
+      uniforms.uSnow.value += (snowTarget - uniforms.uSnow.value) * wxEase;
+      uniforms.uRain.value += (sky.rain - uniforms.uRain.value) * wxEase;
+      uniforms.uFog.value += (sky.fog - uniforms.uFog.value) * wxEase;
+      uniforms.uCloud.value += (sky.cloud - uniforms.uCloud.value) * wxEase;
       flakeUniforms.uTime.value = now / 1000;
       flakeUniforms.uWide.value = layout.wide ? 1 : 0;
       flakeUniforms.uDpr.value = renderer.getPixelRatio();
