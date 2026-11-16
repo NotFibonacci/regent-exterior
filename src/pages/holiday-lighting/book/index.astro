@@ -1,0 +1,73 @@
+---
+import Base from '../../../layouts/Base.astro';
+import { pricing } from '../../../config/pricing';
+import { site } from '../../../config/site';
+const offers = Object.fromEntries(Object.entries(pricing.offers).map(([k, v]) => [k, v.label]));
+const pct = Math.round(Math.min(pricing.depositRate, 1 / 3) * 100);
+---
+<Base title="Book your holiday lighting | Regent Exterior Services" description="Book your holiday lighting from your quote." noindex>
+  <main id="content">
+    <section class="page-intro"><p class="label">Your quote</p><h1>Book your <em>holiday lighting.</em></h1></section>
+    <section class="section quote-book" data-quote-book data-offers={JSON.stringify(offers)} data-rate={Math.min(pricing.depositRate, 1 / 3)} data-email={site.email}>
+      <p class="body" data-bad hidden>This booking link is incomplete or has expired. Reply to our email and we will send you a fresh one.</p>
+      <div data-good hidden>
+        <dl class="quote-sum">
+          <div><dt>For</dt><dd data-q="n"></dd></div>
+          <div><dt>Address</dt><dd data-q="a"></dd></div>
+          <div><dt>Plan</dt><dd data-q="o"></dd></div>
+          <div><dt>Install window</dt><dd data-q="w"></dd></div>
+          <div class="total"><dt>Quoted price</dt><dd data-q="p"></dd></div>
+        </dl>
+        <form class="form" name="holiday-booking-quote" method="POST" action="/thank-you/?type=booking" data-netlify="true" netlify-honeypot="bot-field" data-qform>
+          <input type="hidden" name="form-name" value="holiday-booking-quote" />
+          <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+          <input type="hidden" name="name" /><input type="hidden" name="email" /><input type="hidden" name="address" />
+          <input type="hidden" name="plan" /><input type="hidden" name="quoted_price" /><input type="hidden" name="install_window" />
+          <input type="hidden" name="deposit" /><input type="hidden" name="agreement_version" value={pricing.agreementVersion} />
+          <div class="book-box">
+            <p class="label">Book your install</p>
+            <p class="book-dep" data-dep></p>
+            <label class="check"><input type="checkbox" name="agreement_accepted" value="yes" required /><span>I have read and agree to the <a href="/booking-agreement/" target="_blank" rel="noopener">holiday lighting booking agreement</a>.</span></label>
+            <label>Type your full name to sign<input name="signature" autocomplete="name" required /></label>
+            <div class="book-actions"><button class="btn solid" type="submit" data-pay>Book and pay deposit</button></div>
+            <p class="fine" data-status aria-live="polite">The deposit is {pct}% of your quote and is applied to your total. The balance is due when the installation is complete.</p>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+  <script>
+    const root = document.querySelector<HTMLElement>('[data-quote-book]')!;
+    const q = Object.fromEntries(new URLSearchParams(location.search)) as Record<string, string>;
+    const offers = JSON.parse(root.dataset.offers!), rate = Number(root.dataset.rate);
+    const ok = q.s && q.n && q.e && q.p && Number(q.x) > Date.now() && offers[q.o];
+    if (!ok) root.querySelector<HTMLElement>('[data-bad]')!.hidden = false;
+    else {
+      root.querySelector<HTMLElement>('[data-good]')!.hidden = false;
+      const price = Number(q.p), deposit = Math.round(price * rate), money = (n: number) => '$' + n.toLocaleString('en-US');
+      const show: Record<string, string> = { n: q.n, a: q.a || '(on file)', o: offers[q.o], w: q.w || 'To be scheduled', p: money(price) };
+      root.querySelectorAll<HTMLElement>('[data-q]').forEach((el) => (el.textContent = show[el.dataset.q!]));
+      root.querySelector<HTMLElement>('[data-dep]')!.textContent = `Deposit to book: ${money(deposit)}, applied to your total.`;
+      const f = root.querySelector<HTMLFormElement>('[data-qform]')!;
+      const set = (n: string, v: string) => (f.querySelector<HTMLInputElement>(`[name=${n}]`)!.value = v);
+      set('name', q.n); set('email', q.e); set('address', q.a); set('plan', offers[q.o]); set('quoted_price', money(price)); set('install_window', q.w); set('deposit', money(deposit));
+      const status = root.querySelector<HTMLElement>('[data-status]')!;
+      f.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const btn = root.querySelector<HTMLButtonElement>('[data-pay]')!; btn.disabled = true; status.textContent = 'Sending...';
+        const fd = new FormData(f);
+        try {
+          const r = await fetch('/', { method: 'POST', body: new URLSearchParams(fd as unknown as Record<string, string>) });
+          if (!r.ok) throw new Error();
+        } catch { btn.disabled = false; status.textContent = 'That did not go through. Please check your connection and try again.'; return; }
+        status.textContent = 'Opening secure payment...';
+        try {
+          const r = await fetch('/.netlify/functions/create-deposit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quote: q, signature: fd.get('signature') }) });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d.url) { location.href = d.url; return; }
+        } catch { /* fall through */ }
+        location.href = '/thank-you/?type=booking-pending';
+      });
+    }
+  </script>
+</Base>

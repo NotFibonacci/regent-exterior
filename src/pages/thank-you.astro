@@ -17,6 +17,7 @@ import Base from '../layouts/Base.astro';
         mockup: ['Sketch received', 'Thank you. <em>Your mockup is on its way.</em>', 'A designer will turn your sketch into a finished night rendering of your home and email it to you, usually within two business days.'],
         booking: ['Booking received', 'Your install window <em>is held.</em>', 'We will measure your home, confirm the price and send you a link to pay the deposit. A copy of your booking is on its way by email.'],
         'booking-pending': ['Booking received', 'Your install window <em>is held.</em>', 'Your booking and signed agreement are in. We could not open payment just now, so we will email you a secure link for the deposit within one business day.'],
+        measure: ['Quote requested', 'Thank you. <em>We\u2019ll measure.</em>', 'We will measure your home and email you a quote with a link to book your install.'],
         estimate: ['Estimate sent', 'Thank you. <em>We’ll be in touch.</em>', 'We will confirm the measurements and your install window by email.'],
       };
       var c = copy[new URLSearchParams(location.search).get('type')];

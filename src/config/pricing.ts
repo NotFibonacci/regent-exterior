@@ -71,7 +71,7 @@ export const pricing = {
   minimum: 950,
   // Deposit charged online to book, on the low end of the estimate range.
   // Maryland caps home improvement deposits at one-third of the contract price.
-  depositRate: 0.25,
+  depositRate: 0.33, // owner: always 30-33%
   agreementVersion: '2026-11-16',
   rangeLow: 0.92,
   rangeHigh: 1.12,

@@ -9,6 +9,6 @@ const site = process.env.SITE_URL || 'https://regent-exterior.netlify.app';
 export default defineConfig({
   site,
   trailingSlash: 'always',
-  integrations: [react(), sitemap({ filter: (p) => !/\/(model|thank-you|booking-confirmed|booking-agreement)\/$/.test(p) })],
+  integrations: [react(), sitemap({ filter: (p) => !/\/(model|thank-you|booking-confirmed|booking-agreement|quote-builder|book)\/$/.test(p) })],
   build: { inlineStylesheets: 'auto' },
 });

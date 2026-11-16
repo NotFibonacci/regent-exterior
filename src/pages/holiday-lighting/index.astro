@@ -12,7 +12,7 @@ const faqs = [
   { q: 'Do I own the lights?', a: 'With a Single Install the lights are yours to keep. With Seasonal Service and the Annual Plan the lights are ours: we supply, maintain, take down and store them, which is why those plans cost less.' },
   { q: 'What if a bulb goes out during the season?', a: 'Seasonal Service and Annual Plan clients get in-season maintenance: tell us and we come back and fix it.' },
   { q: 'How accurate is the online estimate?', a: 'It is a range based on what you enter. We confirm the final price on site, before install, once we have measured the roofline and seen the trees.' },
-  { q: 'How does booking work?', a: 'Price your home, sign the booking agreement online and pay a deposit of a quarter of your estimate. The deposit is applied to your total. We confirm the final price on site before install; if it is higher and you decide not to go ahead, the deposit is refunded in full.' },
+  { q: 'How does booking work?', a: 'Price your home here and book online, or tick "Measure it for me" and send us your address. We measure and email you a quote with a link to book. Either way you sign a short booking agreement online before anything is charged.' },
   { q: 'When should I book?', a: 'Install dates fill up through November and December. Anything scheduled inside five days is a rush install and costs more.' },
 ];
 const schema = [
@@ -53,7 +53,7 @@ const addons = [
     ]} />
 
     <section class="section estimator" id="estimate">
-      <div class="sec-head"><p class="label">Instant estimate</p><h2>Price it, <em>then book it.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you. Book with a deposit, or send the estimate as a request.</p></div>
+      <div class="sec-head"><p class="label">Instant estimate</p><h2>Price it, <em>then book it.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you. Book online, or send it to us as a request.</p></div>
       <form class="form est" name="holiday-booking" method="POST" action="/thank-you/?type=booking" data-netlify="true" netlify-honeypot="bot-field" data-estimator>
         <input type="hidden" name="form-name" value="holiday-booking" />
         <input type="hidden" name="deposit" data-est-deposit />
@@ -122,6 +122,11 @@ const addons = [
           <label>Town or ZIP<input name="town" autocomplete="postal-code" required /></label>
           <label>Preferred install window<select name="install_window"><option>As soon as possible</option><option>Mid November</option><option>Late November</option><option>Early December</option><option>Mid December</option></select></label>
         </div>
+        <div class="book-box" data-measure-box hidden>
+          <p class="label">Measure and quote</p>
+          <p class="book-dep">We measure your home, then email you a quote with a link to book. Nothing to pay now.</p>
+          <div class="book-actions"><button class="btn solid" type="submit" formnovalidate data-measure-btn>Send my address for a quote</button></div>
+        </div>
         <div class="book-box" data-book-box>
           <p class="label">Book your install</p>
           <p class="book-dep" data-dep-line></p>
@@ -176,8 +181,9 @@ const addons = [
         depField.value = depositNow ? '$' + depositNow.toLocaleString('en-US') : 'None (measure on site)';
         depLine.textContent = depositNow
           ? `Deposit to book: $${depositNow.toLocaleString('en-US')}, ${Math.round(Math.min(pricing.depositRate, 1 / 3) * 100)}% of the low end of your estimate, applied to your total.`
-          : 'Once we have measured, we send your price and a link to pay the deposit. Booking now holds your install window.';
-        bookBtn.textContent = depositNow ? 'Book and pay deposit' : 'Book my install';
+          : '';
+        f.querySelector<HTMLElement>('[data-book-box]')!.hidden = on('measure');
+        f.querySelector<HTMLElement>('[data-measure-box]')!.hidden = !on('measure');
         if (on('measure')) {
           out.textContent = 'We will measure';
           note.textContent = `We will measure the roofline on site and send your price. Installations start at ${fmt(pricing.minimum)}.`;
@@ -198,13 +204,15 @@ const addons = [
       const status = f.querySelector<HTMLElement>('[data-book-status]')!;
       f.addEventListener('submit', async (ev) => {
         ev.preventDefault();
-        const booking = (ev as SubmitEvent).submitter?.hasAttribute('data-book-btn') ?? true;
+        const sub = (ev as SubmitEvent).submitter;
+        const measure = !!sub?.hasAttribute('data-measure-btn');
+        const booking = !measure && (sub?.hasAttribute('data-book-btn') ?? true);
         if (!booking) {
-          for (const n of ['name', 'email', 'town']) { const i = f.querySelector<HTMLInputElement>(`[name=${n}]`)!; if (!i.reportValidity()) return; }
+          for (const n of measure ? ['name', 'email', 'address', 'town'] : ['name', 'email', 'town']) { const i = f.querySelector<HTMLInputElement>(`[name=${n}]`)!; if (!i.reportValidity()) return; }
         }
         const fd = new FormData(f);
-        fd.set('request_type', booking ? 'Booking' + (depositNow ? ' with deposit' : '') : 'Estimate only');
-        if (!booking) { fd.delete('signature'); fd.delete('agreement_accepted'); }
+        fd.set('request_type', measure ? 'Measure and quote' : booking ? 'Booking with deposit' : 'Estimate only');
+        if (!booking) { fd.delete('signature'); fd.delete('agreement_accepted'); fd.delete('deposit'); fd.delete('agreement_version'); }
         const btns = f.querySelectorAll<HTMLButtonElement>('button[type=submit]');
         btns.forEach((b) => (b.disabled = true));
         status.textContent = 'Sending...';
@@ -216,7 +224,7 @@ const addons = [
           status.textContent = 'That did not go through. Please check your connection and try again.';
           return;
         }
-        if (!booking || !depositNow) { location.href = booking ? '/thank-you/?type=booking' : '/thank-you/?type=estimate'; return; }
+        if (!booking || !depositNow) { location.href = measure ? '/thank-you/?type=measure' : '/thank-you/?type=estimate'; return; }
         status.textContent = 'Opening secure payment...';
         try {
           const res = await fetch('/.netlify/functions/create-deposit', {

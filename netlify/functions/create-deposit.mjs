@@ -5,6 +5,7 @@
 // returns 503 and the page falls back to "we'll email your deposit link".
 import { estimate, depositFor } from '../../src/config/estimate.ts';
 import { pricing } from '../../src/config/pricing.ts';
+import { verify } from '../lib/quote.mjs';
 
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 const text = (v, max = 120) => String(v ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, max);
@@ -16,6 +17,29 @@ export default async (req) => {
 
   let b;
   try { b = await req.json(); } catch { return Response.json({ error: 'bad-request' }, { status: 400 }); }
+  const origin = process.env.URL || new URL(req.url).origin;
+  const rate = Math.min(pricing.depositRate, 1 / 3);
+
+  // Booking from a quote link: the owner's signed price, not the estimator.
+  if (b.quote) {
+    const q = b.quote;
+    if (!verify(q)) return Response.json({ error: 'bad-quote' }, { status: 400 });
+    const price = Number(q.p), deposit = Math.round(price * rate), plan = pricing.offers[q.o]?.label ?? 'Holiday lighting';
+    const p = new URLSearchParams({
+      mode: 'payment', customer_email: q.e,
+      success_url: `${origin}/booking-confirmed/?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/holiday-lighting/book/?${new URLSearchParams(q)}`,
+      'line_items[0][quantity]': '1', 'line_items[0][price_data][currency]': 'usd',
+      'line_items[0][price_data][unit_amount]': String(deposit * 100),
+      'line_items[0][price_data][product_data][name]': `Holiday lighting deposit: ${plan}`,
+      'line_items[0][price_data][product_data][description]': `Applied to your quoted total of $${price.toLocaleString('en-US')}.`,
+      'payment_intent_data[description]': `Holiday lighting deposit (quote), ${q.n}, ${q.a}`,
+      'metadata[name]': q.n, 'metadata[address]': q.a, 'metadata[plan]': plan, 'metadata[quoted_price]': `$${price}`,
+      'metadata[install_window]': q.w, 'metadata[signed_by]': text(b.signature), 'metadata[agreement_version]': pricing.agreementVersion,
+    });
+    return checkout(key, p, deposit);
+  }
+
   const offer = ['single', 'seasonal', 'annual'].includes(b.offer) ? b.offer : 'seasonal';
   const input = {
     roofline: int(b.roofline, 2000), stories: Math.max(1, int(b.stories, 3)), steep: !!b.steep,
@@ -30,7 +54,6 @@ export default async (req) => {
   const deposit = depositFor(e);
   if (deposit < 1) return Response.json({ error: 'no-deposit' }, { status: 400 });
 
-  const origin = process.env.URL || new URL(req.url).origin;
   const label = pricing.offers[offer].label;
   const p = new URLSearchParams({
     mode: 'payment',
@@ -52,13 +75,17 @@ export default async (req) => {
     'metadata[signed_by]': text(b.signature),
     'metadata[agreement_version]': pricing.agreementVersion,
   });
+  return checkout(key, p, deposit);
+};
+
+async function checkout(key, params, deposit) {
   const res = await fetch('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: p,
+    body: params,
   });
   const data = await res.json();
   if (!res.ok || !data.url) return Response.json({ error: 'stripe', detail: data?.error?.message }, { status: 502 });
   return Response.json({ url: data.url, deposit });
-};
+}
 

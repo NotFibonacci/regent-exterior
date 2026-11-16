@@ -1,0 +1,52 @@
+---
+// Owner tool (not linked anywhere): turns a measured quote into a booking
+// link for the customer. Needs OWNER_KEY set in Netlify.
+import Base from '../layouts/Base.astro';
+import { pricing } from '../config/pricing';
+import { site } from '../config/site';
+---
+<Base title="Quote builder | Regent Exterior Services" description="Owner tool." noindex>
+  <main id="content">
+    <section class="page-intro"><p class="label">Owner tool</p><h1>Send a <em>booking link.</em></h1><p class="body">After measuring, enter the quote. You get a link to email the customer; it opens their booking page with your price, the agreement and the deposit. Links last 30 days.</p></section>
+    <section class="section">
+      <form class="form qb" data-qb data-biz={site.name}>
+        <label>Owner key<input type="password" name="key" required autocomplete="current-password" /></label>
+        <div class="row">
+          <label>Customer name<input name="name" required /></label>
+          <label>Customer email<input type="email" name="email" required /></label>
+        </div>
+        <label>Address<input name="address" required /></label>
+        <div class="row">
+          <label>Plan<select name="plan">{Object.entries(pricing.offers).map(([k, v]) => <option value={k} selected={k === 'seasonal'}>{v.label}</option>)}</select></label>
+          <label>Quoted price ($)<input type="number" name="price" min="100" step="1" required inputmode="numeric" /></label>
+        </div>
+        <label>Install window<input name="window" placeholder="e.g. Week of Nov 24" /></label>
+        <button class="btn solid" type="submit">Create booking link</button>
+        <p class="fine" data-qb-status aria-live="polite"></p>
+        <div class="qb-out" data-qb-out hidden>
+          <input readonly data-qb-link aria-label="Booking link" />
+          <div class="book-actions"><button type="button" class="btn ghost" data-qb-copy>Copy link</button><a class="btn ghost" data-qb-mail>Email it to the customer</a></div>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script>
+    const f = document.querySelector<HTMLFormElement>('[data-qb]')!;
+    const status = f.querySelector<HTMLElement>('[data-qb-status]')!, out = f.querySelector<HTMLElement>('[data-qb-out]')!, link = f.querySelector<HTMLInputElement>('[data-qb-link]')!;
+    f.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      status.textContent = 'Creating link...'; out.hidden = true;
+      const d = Object.fromEntries(new FormData(f));
+      try {
+        const r = await fetch('/.netlify/functions/sign-quote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) { status.textContent = j.error === 'wrong-key' ? 'Wrong owner key.' : 'Could not create the link. Check the fields and try again.'; return; }
+        link.value = j.url; out.hidden = false; status.textContent = 'Link ready.';
+        const price = '$' + Number(d.price).toLocaleString('en-US');
+        const body = `Hi ${String(d.name).split(' ')[0]},\n\nThank you for letting us measure. Your holiday lighting quote is ${price}.\n\nYou can review it, sign the booking agreement and book your install here:\n${j.url}\n\n${f.dataset.biz}`;
+        f.querySelector<HTMLAnchorElement>('[data-qb-mail]')!.href = `mailto:${encodeURIComponent(String(d.email))}?subject=${encodeURIComponent('Your holiday lighting quote')}&body=${encodeURIComponent(body)}`;
+      } catch { status.textContent = 'Could not reach the server.'; }
+    });
+    f.querySelector('[data-qb-copy]')!.addEventListener('click', async () => { try { await navigator.clipboard.writeText(link.value); status.textContent = 'Copied.'; } catch { link.select(); } });
+  </script>
+</Base>
