@@ -69,6 +69,10 @@ export const pricing = {
     annual: { label: 'Annual Plan', premium: -0.1, note: 'Seasonal Service on a three-year plan, price held. Lights leased.' },
   },
   minimum: 950,
+  // Deposit charged online to book, on the low end of the estimate range.
+  // Maryland caps home improvement deposits at one-third of the contract price.
+  depositRate: 0.25,
+  agreementVersion: '2026-11-16',
   rangeLow: 0.92,
   rangeHigh: 1.12,
 } as const;

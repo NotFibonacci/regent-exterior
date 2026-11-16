@@ -29,7 +29,7 @@ const LAYERS = [
         <h1 style="--i:1">Your home, <em>after dark.</em></h1>
         <p class="body" style="--i:2">Lighting designed for the house you already have. Scroll down, then choose what comes on.</p>
         <p class="hint" style="--i:3">Move across the house. The light is yours.</p>
-        <p class="weather-now" data-weather-now hidden style="--i:4"></p>
+        <p class="weather-now" data-weather-now hidden style="--i:4"><span data-weather-text></span> <button type="button" class="wx-toggle" data-weather-toggle aria-pressed="true">Weather on</button></p>
       </div>
     </section>
 
@@ -47,7 +47,7 @@ const LAYERS = [
             </div>
           ))}
         </div>
-        <p style="--i:3"><button type="button" class="pick" data-pick>Choose for me</button></p>
+        <p style="--i:3"><button type="button" class="pick" data-pick>Choose for me</button> <button type="button" class="wx-toggle" data-weather-toggle aria-pressed="true" hidden>Weather on</button> <a class="try-own" href="/your-home/">Try it on your own home &rarr;</a></p>
         <p class="body layer-note" aria-live="polite" style="--i:4">Switch each layer on, and choose its level from 1 to 3. Path and landscape lighting is on to start.</p>
         <div class="options" data-holiday-options hidden style="--i:5">
           <div class="swatches" role="group" aria-label="Holiday light color">
@@ -200,14 +200,32 @@ const LAYERS = [
         }, n * 300);
       });
 
-      // Live weather line under the opening copy.
+      // Live weather line under the opening copy, with an off switch that
+      // is remembered on this device.
       var wx = document.querySelector('[data-weather-now]');
+      var wxText = document.querySelector('[data-weather-text]');
+      var toggles = document.querySelectorAll('[data-weather-toggle]');
+      var wxOff = false;
+      try { wxOff = localStorage.getItem('regent-weather-off') === '1'; } catch (e) {}
+      var paintToggles = function () {
+        toggles.forEach(function (t) { t.setAttribute('aria-pressed', String(!wxOff)); t.textContent = wxOff ? 'Weather off' : 'Weather on'; });
+      };
+      paintToggles();
+      toggles.forEach(function (t) {
+        t.addEventListener('click', function () {
+          wxOff = !wxOff;
+          try { localStorage.setItem('regent-weather-off', wxOff ? '1' : '0'); } catch (e) {}
+          paintToggles();
+          window.dispatchEvent(new CustomEvent('regent:weather-off', { detail: { off: wxOff } }));
+        });
+      });
       window.addEventListener('regent:weather', function (e) {
         var w = e.detail; if (!wx || !w) return;
         var words = { clear: 'clear skies', cloudy: 'cloudy', fog: 'fog', rain: 'rain', storm: 'thunderstorms', snow: 'snow' };
         var t = w.kind === 'clear' || w.kind === 'storm' ? words[w.kind] : w.text;
-        wx.textContent = 'In Maryland right now: ' + t + (w.tempF != null ? ', ' + w.tempF + '\u00b0F' : '') + '. The scene follows the weather.';
+        wxText.textContent = 'In Maryland right now: ' + t + (w.tempF != null ? ', ' + w.tempF + '\u00b0F' : '') + '.';
         wx.hidden = false;
+        toggles.forEach(function (t) { t.hidden = false; });
       });
 
       request.addEventListener('click', refresh);

@@ -14,8 +14,9 @@ interface Props {
   image?: string;
   preloader?: boolean;
   schema?: Record<string, unknown>[];
+  noindex?: boolean;
 }
-const { title, description, image = '/img/lighting-full.webp', preloader = false, schema = [] } = Astro.props;
+const { title, description, image = '/img/lighting-full.webp', preloader = false, schema = [], noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
 const ogImage = new URL(image, Astro.site).href;
 const path = Astro.url.pathname;
@@ -46,6 +47,7 @@ if (site.address) business.address = site.address;
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
     <meta name="theme-color" content="#08090b" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
@@ -82,7 +84,7 @@ if (site.address) business.address = site.address;
       </nav>
       <div class="meta">
         {site.phone && <a class="phone" href={`tel:${site.phone.replace(/[^0-9+]/g, '')}`}>{site.phone}</a>}
-        <a class="btn" href="/contact/">Request a visit</a>
+        <a class="btn" href="/contact/">Book a consultation</a>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><span>Menu</span></button>
       </div>
     </header>

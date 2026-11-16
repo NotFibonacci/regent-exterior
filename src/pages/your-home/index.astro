@@ -1,0 +1,217 @@
+---
+import Base from '../../layouts/Base.astro';
+import { site } from '../../config/site';
+const tools = [
+  { k: 'path', label: 'Path light', hint: 'Tap the ground where it stands.' },
+  { k: 'up', label: 'Uplight', hint: 'Tap the base of a wall, column or tree.' },
+  { k: 'down', label: 'Soffit light', hint: 'Tap under the roof edge.' },
+  { k: 'string', label: 'Holiday string', hint: 'Tap the start, then the end of a roofline.' },
+];
+---
+<Base title="See lighting on your own home | Regent Exterior Services" description="Upload a photo of your house, place path lights, uplights, soffit lights and holiday strings, and ask us for a finished mockup. Free, in your browser.">
+  <main id="content">
+    <section class="page-intro">
+      <p class="label">Your home, after dark</p>
+      <h1>Sketch the lighting <em>on your own house.</em></h1>
+      <p class="body">Upload a daytime photo of the front of your home. We turn it to night; you tap where each light goes. Your photo stays on your device unless you send it to us.</p>
+    </section>
+
+    <section class="section sketch" data-sketch>
+      <div class="sk-stage">
+        <label class="sk-drop" data-drop>
+          <input type="file" accept="image/*" data-file />
+          <span class="sk-drop-in"><strong>Choose a photo of your house</strong><small>Straight on, in daylight, the whole front in frame. JPG, PNG or iPhone photo.</small></span>
+        </label>
+        <canvas data-canvas hidden aria-label="Your home at night with the lights you have placed"></canvas>
+      </div>
+
+      <div class="sk-panel" data-panel hidden>
+        <fieldset class="sk-tools">
+          <legend>Place a light</legend>
+          {tools.map((t, i) => (
+            <label class="sk-tool"><input type="radio" name="tool" value={t.k} checked={i === 0} data-tool data-hint={t.hint} /><span>{t.label}</span></label>
+          ))}
+        </fieldset>
+        <p class="sk-hint" data-hint aria-live="polite">{tools[0].hint}</p>
+        <label class="sk-range">Light size<input type="range" min="0.5" max="2" step="0.05" value="1" data-size /></label>
+        <label class="sk-range">Night<input type="range" min="0.2" max="0.6" step="0.01" value="0.34" data-night /></label>
+        <label class="check"><input type="checkbox" data-multi /><span>Multicolor holiday bulbs</span></label>
+        <div class="sk-actions">
+          <button type="button" class="btn ghost" data-undo>Undo</button>
+          <button type="button" class="btn ghost" data-clear>Clear</button>
+          <button type="button" class="btn ghost" data-new>New photo</button>
+        </div>
+        <p class="sk-count" data-count>No lights placed yet.</p>
+        <button type="button" class="btn solid sk-cta" data-cta disabled>Like what you see? We'll send you a mockup!</button>
+      </div>
+    </section>
+
+    <section class="section sk-send" id="mockup" data-send hidden>
+      <div class="sec-head"><p class="label">Free mockup</p><h2>We'll draw it <em>properly.</em></h2><p class="body">Send us your sketch. A designer turns it into a finished night rendering of your home and emails it to you, with a written price. This is not a booking.</p></div>
+      <form class="form" name="mockup-request" method="POST" action="/thank-you/?type=mockup" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field" data-mockup-form data-email={site.email}>
+        <input type="hidden" name="form-name" value="mockup-request" />
+        <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
+        <input type="hidden" name="lead_source" data-lead-source value="" />
+        <input type="hidden" name="fixtures" data-fixtures value="" />
+        <input type="file" name="sketch" accept="image/jpeg" hidden tabindex="-1" aria-hidden="true" />
+        <img class="sk-thumb" data-thumb alt="Your sketch" />
+        <div class="row">
+          <label>Name<input name="name" autocomplete="name" required /></label>
+          <label>Email<input type="email" name="email" autocomplete="email" required /></label>
+        </div>
+        <div class="row">
+          <label>Phone<input type="tel" name="phone" autocomplete="tel" /></label>
+          <label>Street address<input name="address" autocomplete="street-address" /></label>
+        </div>
+        <div class="row">
+          <label>Town or ZIP<input name="town" autocomplete="postal-code" required /></label>
+          <label>Interested in<select name="interest"><option>Architectural and landscape lighting</option><option>Holiday lighting</option><option>Both</option></select></label>
+        </div>
+        <label>Anything else?<textarea name="message" rows="3" placeholder="Fixtures you like, colors, what matters most to you."></textarea></label>
+        <button class="btn solid" type="submit" data-send-btn>Send my sketch</button>
+        <p class="fine" data-send-status aria-live="polite">Your sketch is sent with this form. We use it only to prepare your mockup.</p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    type Fx = { t: 'path' | 'up' | 'down' | 'string'; x: number; y: number; x2?: number; y2?: number; s: number };
+    const root = document.querySelector<HTMLElement>('[data-sketch]')!;
+    const canvas = root.querySelector<HTMLCanvasElement>('[data-canvas]')!;
+    const ctx = canvas.getContext('2d')!;
+    const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!;
+    const fileIn = $<HTMLInputElement>('[data-file]'), drop = $<HTMLElement>('[data-drop]'), panel = $<HTMLElement>('[data-panel]');
+    const hint = $<HTMLElement>('[data-hint]'), count = $<HTMLElement>('[data-count]'), cta = $<HTMLButtonElement>('[data-cta]');
+    const size = $<HTMLInputElement>('[data-size]'), night = $<HTMLInputElement>('[data-night]'), multi = $<HTMLInputElement>('[data-multi]');
+    const send = $<HTMLElement>('[data-send]'), form = $<HTMLFormElement>('[data-mockup-form]');
+    const WARM = [255, 172, 96];
+    const COLORS = [[255, 60, 50], [60, 220, 90], [70, 130, 255], [255, 200, 60], [230, 90, 255]];
+    let photo: HTMLCanvasElement | null = null;
+    let fx: Fx[] = [];
+    let pending: { x: number; y: number } | null = null;
+    const tool = () => (document.querySelector<HTMLInputElement>('[data-tool]:checked')!.value as Fx['t']);
+    const off = (w: number, h: number) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+
+    // Glow helper: radial gradient, optionally squashed into an ellipse.
+    function glow(c: CanvasRenderingContext2D, x: number, y: number, r: number, rgb: number[], a: number, sx = 1, sy = 1) {
+      c.save(); c.translate(x, y); c.scale(sx, sy);
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, r);
+      g.addColorStop(0, `rgba(${rgb},${a})`); g.addColorStop(0.35, `rgba(${rgb},${a * 0.45})`); g.addColorStop(1, `rgba(${rgb},0)`);
+      c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill(); c.restore();
+    }
+
+    function draw() {
+      if (!photo) return;
+      const W = photo.width, H = photo.height, U = W / 14; // base fixture radius scales with the photo
+      // 1. Night base: the photo multiplied down to a cool dusk.
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(photo, 0, 0);
+      const n = Number(night.value);
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgb(${Math.round(255 * n * 0.62)},${Math.round(255 * n * 0.72)},${Math.round(255 * n)})`;
+      ctx.fillRect(0, 0, W, H);
+      // 2. Light map (what each fixture throws onto surfaces).
+      const L = off(W, H), l = L.getContext('2d')!;
+      l.fillStyle = '#000'; l.fillRect(0, 0, W, H); l.globalCompositeOperation = 'lighter';
+      // 3. Emissive points (the fixtures and bulbs themselves).
+      const E = off(W, H), e = E.getContext('2d')!; e.globalCompositeOperation = 'lighter';
+      for (const f of fx) {
+        const r = U * f.s;
+        if (f.t === 'path') {
+          glow(l, f.x, f.y, r * 1.3, WARM, 0.9, 1, 0.42);
+          glow(e, f.x, f.y - r * 0.28, r * 0.12, [255, 214, 160], 0.95);
+        } else if (f.t === 'up') {
+          glow(l, f.x, f.y - r * 1.1, r * 1.6, WARM, 0.85, 0.4, 1);
+          glow(l, f.x, f.y, r * 0.5, WARM, 0.7, 1, 0.5);
+          glow(e, f.x, f.y, r * 0.1, [255, 214, 160], 0.9);
+        } else if (f.t === 'down') {
+          glow(l, f.x, f.y + r * 0.95, r * 1.4, WARM, 0.85, 0.45, 1);
+          glow(e, f.x, f.y, r * 0.09, [255, 230, 190], 1);
+        } else if (f.t === 'string' && f.x2 != null && f.y2 != null) {
+          const len = Math.hypot(f.x2 - f.x, f.y2 - f.y), step = Math.max(6, r * 0.2), nB = Math.max(2, Math.round(len / step));
+          for (let i = 0; i <= nB; i++) {
+            const t = i / nB, bx = f.x + (f.x2 - f.x) * t, by = f.y + (f.y2 - f.y) * t;
+            const col = multi.checked ? COLORS[i % COLORS.length] : WARM;
+            glow(l, bx, by, r * 0.35, col, 0.35);
+            glow(e, bx, by, r * 0.07, col.map((v) => Math.min(255, v + 60)), 1);
+          }
+        }
+      }
+      // 4. Relight: photo x light map, added twice so lit stone and siding keep their texture.
+      const R = off(W, H), rr = R.getContext('2d')!;
+      rr.drawImage(photo, 0, 0); rr.globalCompositeOperation = 'multiply'; rr.drawImage(L, 0, 0);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(R, 0, 0); ctx.drawImage(R, 0, 0);
+      ctx.drawImage(E, 0, 0);
+      if (pending) { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#ffa957'; ctx.beginPath(); ctx.arc(pending.x, pending.y, Math.max(4, U * 0.06), 0, Math.PI * 2); ctx.fill(); }
+      ctx.globalCompositeOperation = 'source-over';
+      const c = { path: 0, up: 0, down: 0, string: 0 } as Record<Fx['t'], number>;
+      fx.forEach((f) => c[f.t]++);
+      const parts = [[c.path, 'path light'], [c.up, 'uplight'], [c.down, 'soffit light'], [c.string, 'holiday string']].filter(([k]) => k).map(([k, w]) => `${k} ${w}${k === 1 ? '' : 's'}`);
+      count.textContent = parts.length ? parts.join(', ') + '.' : 'No lights placed yet.';
+      cta.disabled = !fx.length;
+    }
+
+    async function load(file: File) {
+      let img: CanvasImageSource & { width: number; height: number };
+      try { img = await createImageBitmap(file, { imageOrientation: 'from-image' } as ImageBitmapOptions); }
+      catch {
+        img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+      }
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      photo = off(Math.round(img.width * scale), Math.round(img.height * scale));
+      photo.getContext('2d')!.drawImage(img, 0, 0, photo.width, photo.height);
+      canvas.width = photo.width; canvas.height = photo.height;
+      fx = []; pending = null;
+      drop.hidden = true; canvas.hidden = false; panel.hidden = false;
+      draw();
+    }
+    fileIn.addEventListener('change', () => { const f = fileIn.files?.[0]; if (f) load(f).catch(() => { hint.textContent = 'That photo could not be opened. Try a JPG or PNG.'; }); });
+
+    canvas.addEventListener('pointerdown', (ev) => {
+      if (!photo) return;
+      const b = canvas.getBoundingClientRect();
+      const x = ((ev.clientX - b.left) / b.width) * canvas.width, y = ((ev.clientY - b.top) / b.height) * canvas.height;
+      const t = tool(), s = Number(size.value);
+      if (t === 'string') {
+        if (!pending) { pending = { x, y }; hint.textContent = 'Now tap the end of the line.'; }
+        else { fx.push({ t, x: pending.x, y: pending.y, x2: x, y2: y, s }); pending = null; hint.textContent = 'Tap the start, then the end of a roofline.'; }
+      } else fx.push({ t, x, y, s });
+      draw();
+    });
+    document.querySelectorAll<HTMLInputElement>('[data-tool]').forEach((r) => r.addEventListener('change', () => { pending = null; hint.textContent = r.dataset.hint!; draw(); }));
+    [size, night, multi].forEach((i) => i.addEventListener('input', draw));
+    $<HTMLButtonElement>('[data-undo]').addEventListener('click', () => { if (pending) pending = null; else fx.pop(); draw(); });
+    $<HTMLButtonElement>('[data-clear]').addEventListener('click', () => { fx = []; pending = null; draw(); });
+    $<HTMLButtonElement>('[data-new]').addEventListener('click', () => { fileIn.value = ''; fileIn.click(); });
+
+    // Mockup request: the sketch travels as a JPEG attached to the Netlify form.
+    let sketch: Blob | null = null;
+    cta.addEventListener('click', () => {
+      pending = null; draw();
+      canvas.toBlob((b) => {
+        sketch = b;
+        if (b) $<HTMLImageElement>('[data-thumb]').src = URL.createObjectURL(b);
+        $<HTMLInputElement>('[data-fixtures]').value = count.textContent + (multi.checked ? ' Multicolor holiday bulbs.' : '');
+        send.hidden = false;
+        send.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => form.querySelector<HTMLInputElement>('input[name=name]')?.focus({ preventScroll: true }), 600);
+      }, 'image/jpeg', 0.82);
+    });
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const btn = $<HTMLButtonElement>('[data-send-btn]'), status = $<HTMLElement>('[data-send-status]');
+      btn.disabled = true; status.textContent = 'Sending your sketch...';
+      const fd = new FormData(form);
+      if (sketch) fd.set('sketch', sketch, 'home-lighting-sketch.jpg');
+      try {
+        const res = await fetch('/', { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(String(res.status));
+        location.href = '/thank-you/?type=mockup';
+      } catch {
+        btn.disabled = false;
+        status.textContent = `That did not go through. Please try again, or email your photo to ${form.dataset.email}.`;
+      }
+    });
+  </script>
+</Base>

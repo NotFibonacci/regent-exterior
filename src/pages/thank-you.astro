@@ -1,13 +1,29 @@
 ---
 import Base from '../layouts/Base.astro';
 ---
-<Base title="Thank you | Regent Exterior Services" description="Your request has been sent.">
+<Base title="Thank you | Regent Exterior Services" description="Your request has been sent." noindex>
   <main id="content">
-    <section class="page-intro centered">
-      <p class="label">Request received</p>
-      <h1>Thank you. <em>We'll be in touch.</em></h1>
-      <p class="body">We usually reply within one business day. If you asked for holiday lighting, we will confirm the measurements and your install window.</p>
+    <section class="page-intro centered" data-thanks>
+      <p class="label" data-t-label>Request received</p>
+      <h1 data-t-title>Thank you. <em>We'll be in touch.</em></h1>
+      <p class="body" data-t-body>We usually reply within one business day.</p>
       <p><a class="btn" href="/">Back to the home page</a></p>
     </section>
   </main>
+  <script is:inline>
+    (function () {
+      var copy = {
+        consultation: ['Consultation requested', 'Thank you. <em>We’ll be in touch.</em>', 'We will reply within one business day to set a time to visit your home.'],
+        mockup: ['Sketch received', 'Thank you. <em>Your mockup is on its way.</em>', 'A designer will turn your sketch into a finished night rendering of your home and email it to you, usually within two business days.'],
+        booking: ['Booking received', 'Your install window <em>is held.</em>', 'We will measure your home, confirm the price and send you a link to pay the deposit. A copy of your booking is on its way by email.'],
+        'booking-pending': ['Booking received', 'Your install window <em>is held.</em>', 'Your booking and signed agreement are in. We could not open payment just now, so we will email you a secure link for the deposit within one business day.'],
+        estimate: ['Estimate sent', 'Thank you. <em>We’ll be in touch.</em>', 'We will confirm the measurements and your install window by email.'],
+      };
+      var c = copy[new URLSearchParams(location.search).get('type')];
+      if (!c) return;
+      document.querySelector('[data-t-label]').textContent = c[0];
+      document.querySelector('[data-t-title]').innerHTML = c[1];
+      document.querySelector('[data-t-body]').textContent = c[2];
+    })();
+  </script>
 </Base>

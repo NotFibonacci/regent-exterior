@@ -312,9 +312,16 @@ export default function PhotoStage() {
 
     // Live weather targets, eased in the frame loop.
     const sky = { rain: 0, snow: 0, fog: 0, cloud: 0 };
+    const live = { rain: 0, snow: 0, fog: 0, cloud: 0 };
+    let weatherOff = false;
+    try { weatherOff = localStorage.getItem('regent-weather-off') === '1'; } catch { /* storage unavailable */ }
+    const applySky = () => Object.assign(sky, weatherOff ? { rain: 0, snow: 0, fog: 0, cloud: 0 } : live);
+    const onWeatherOff = (ev: Event) => { weatherOff = !!(ev as CustomEvent).detail?.off; applySky(); };
+    window.addEventListener('regent:weather-off', onWeatherOff);
     getWeather().then((w: Weather | null) => {
       if (!alive || !w) return;
-      Object.assign(sky, { rain: w.rain, snow: w.snow, fog: w.fog, cloud: w.cloud });
+      Object.assign(live, { rain: w.rain, snow: w.snow, fog: w.fog, cloud: w.cloud });
+      applySky();
       window.dispatchEvent(new CustomEvent('regent:weather', { detail: w }));
     });
 
@@ -472,6 +479,7 @@ export default function PhotoStage() {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', move);
       window.removeEventListener('regent:holiday', onChoice);
+      window.removeEventListener('regent:weather-off', onWeatherOff);
       window.removeEventListener('regent:tier', onTier);
       gsap.killTweensOf(uniforms.uIntro);
       stop();

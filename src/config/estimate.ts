@@ -79,3 +79,9 @@ export function estimate(i: EstimateInput) {
     summary: `${install.size} laborers, about ${install.onSite} h on site${leased ? `; takedown ${takedown!.size} x ${takedown!.onSite} h` : ''}`,
   };
 }
+
+/** Deposit to book online: depositRate of the low estimate, never over one-third, whole dollars. */
+export function depositFor(e: { lo: number }) {
+  const rate = Math.min(pricing.depositRate, 1 / 3);
+  return Math.round(e.lo * rate);
+}

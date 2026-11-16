@@ -1,8 +1,8 @@
 ---
 import { site } from '../config/site';
 interface Props { title?: string; lede?: string; interest?: string; id?: string }
-const { title = 'Request a <em>design visit.</em>', lede = 'Tell us about the house. We come out, see it in person, and give you a written plan and price.', interest = '', id = 'request' } = Astro.props;
-const services = ['Architectural and landscape lighting', 'Holiday lighting', 'Windows', 'Gutters', 'Siding and stone', 'Doors'];
+const { title = 'Book a <em>consultation.</em>', lede = 'For lighting, windows, gutters, siding, stone and doors. We visit in person, see the house, and send you a written plan and price. No cost, no obligation.', interest = '', id = 'request' } = Astro.props;
+const services = ['Architectural and landscape lighting', 'Windows', 'Gutters', 'Siding and stone', 'Doors'];
 ---
 <section class="lead" id={id}>
   <div class="lead-inner">
@@ -16,8 +16,8 @@ const services = ['Architectural and landscape lighting', 'Holiday lighting', 'W
         <li>Serving {site.areaLine}</li>
       </ul>
     </div>
-    <form class="form" name="request" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="request" />
+    <form class="form" name="consultation" method="POST" action="/thank-you/?type=consultation" data-netlify="true" netlify-honeypot="bot-field">
+      <input type="hidden" name="form-name" value="consultation" />
       <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
         <input type="hidden" name="lead_source" data-lead-source value="" />
       <input type="hidden" name="design" data-design-field value="" />
@@ -29,6 +29,10 @@ const services = ['Architectural and landscape lighting', 'Holiday lighting', 'W
         <label>Phone<input type="tel" name="phone" autocomplete="tel" /></label>
         <label>Town or ZIP<input name="town" autocomplete="address-level2" required /></label>
       </div>
+      <div class="row">
+        <label>Street address<input name="address" autocomplete="street-address" /></label>
+        <label>Best time for a visit<select name="visit_time"><option>Weekday morning</option><option>Weekday afternoon</option><option>Weekday evening (to see the house after dark)</option><option>Saturday</option><option>Any time</option></select></label>
+      </div>
       <fieldset>
         <legend>What are you interested in?</legend>
         <div class="checks">
@@ -37,7 +41,8 @@ const services = ['Architectural and landscape lighting', 'Holiday lighting', 'W
       </fieldset>
       <label>About the house<textarea name="message" rows="4" placeholder="Anything we should know: the style of the house, what you would like lit, timing."></textarea></label>
       <p class="design-summary" data-design-summary hidden></p>
-      <button class="btn solid" type="submit">Send request</button>
+      <button class="btn solid" type="submit">Request a consultation</button>
+      <p class="fine">Booking holiday lights? <a href="/holiday-lighting/#estimate">Price and book them online</a>.</p>
       <p class="fine">We reply by email{site.phone ? ' or phone' : ''}, usually within one business day.</p>
     </form>
   </div>

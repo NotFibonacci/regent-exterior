@@ -12,6 +12,7 @@ const faqs = [
   { q: 'Do I own the lights?', a: 'With a Single Install the lights are yours to keep. With Seasonal Service and the Annual Plan the lights are ours: we supply, maintain, take down and store them, which is why those plans cost less.' },
   { q: 'What if a bulb goes out during the season?', a: 'Seasonal Service and Annual Plan clients get in-season maintenance: tell us and we come back and fix it.' },
   { q: 'How accurate is the online estimate?', a: 'It is a range based on what you enter. We confirm the final price on site, before install, once we have measured the roofline and seen the trees.' },
+  { q: 'How does booking work?', a: 'Price your home, sign the booking agreement online and pay a deposit of a quarter of your estimate. The deposit is applied to your total. We confirm the final price on site before install; if it is higher and you decide not to go ahead, the deposit is refunded in full.' },
   { q: 'When should I book?', a: 'Install dates fill up through November and December. Anything scheduled inside five days is a rush install and costs more.' },
 ];
 const schema = [
@@ -52,9 +53,11 @@ const addons = [
     ]} />
 
     <section class="section estimator" id="estimate">
-      <div class="sec-head"><p class="label">Instant estimate</p><h2>Your price, <em>in a minute.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you.</p></div>
-      <form class="form est" name="holiday-quote" method="POST" action="/thank-you/" data-netlify="true" netlify-honeypot="bot-field" data-estimator>
-        <input type="hidden" name="form-name" value="holiday-quote" />
+      <div class="sec-head"><p class="label">Instant estimate</p><h2>Price it, <em>then book it.</em></h2><p class="body">Enter what you know. If you are not sure of a number, tick the box and we will measure it for you. Book with a deposit, or send the estimate as a request.</p></div>
+      <form class="form est" name="holiday-booking" method="POST" action="/thank-you/?type=booking" data-netlify="true" netlify-honeypot="bot-field" data-estimator>
+        <input type="hidden" name="form-name" value="holiday-booking" />
+        <input type="hidden" name="deposit" data-est-deposit />
+        <input type="hidden" name="agreement_version" value={pricing.agreementVersion} />
         <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off" /></label></p>
         <input type="hidden" name="lead_source" data-lead-source value="" />
         <input type="hidden" name="estimate" data-est-field />
@@ -119,8 +122,17 @@ const addons = [
           <label>Town or ZIP<input name="town" autocomplete="postal-code" required /></label>
           <label>Preferred install window<select name="install_window"><option>As soon as possible</option><option>Mid November</option><option>Late November</option><option>Early December</option><option>Mid December</option></select></label>
         </div>
-        <button class="btn solid" type="submit">Request this estimate</button>
-        <p class="fine">Sending this reserves nothing and costs nothing. We confirm the price on site, then send a written agreement. No payment is taken before it is signed.</p>
+        <div class="book-box" data-book-box>
+          <p class="label">Book your install</p>
+          <p class="book-dep" data-dep-line></p>
+          <label class="check"><input type="checkbox" name="agreement_accepted" value="yes" required data-agree /><span>I have read and agree to the <a href="/booking-agreement/" target="_blank" rel="noopener">holiday lighting booking agreement</a>.</span></label>
+          <label>Type your full name to sign<input name="signature" autocomplete="name" required data-sign /></label>
+          <div class="book-actions">
+            <button class="btn solid" type="submit" data-book-btn>Book and pay deposit</button>
+            <button class="btn ghost" type="submit" formnovalidate data-request-btn>Just send me the estimate</button>
+          </div>
+          <p class="fine" data-book-status aria-live="polite">The deposit is applied to your total. We confirm the final price on site before install; if it is higher than your estimate and you decide not to go ahead, your deposit is refunded in full.</p>
+        </div>
       </form>
     </section>
 
@@ -128,7 +140,7 @@ const addons = [
   </main>
 
   <script>
-    import { estimate, type OfferKey } from '../../config/estimate';
+    import { estimate, depositFor, type OfferKey } from '../../config/estimate';
     import { pricing } from '../../config/pricing';
     const f = document.querySelector<HTMLFormElement>('[data-estimator]');
     if (f) {
@@ -137,6 +149,9 @@ const addons = [
       const on = (k: string) => { const e = el(k) as HTMLInputElement | null; return !!e && !e.disabled && e.checked; };
       const fmt = (n: number) => '$' + (Math.round(n / 10) * 10).toLocaleString('en-US');
       const out = f.querySelector('[data-est-price]')!, note = f.querySelector('[data-est-note]')!;
+      const depField = f.querySelector<HTMLInputElement>('[data-est-deposit]')!, depLine = f.querySelector<HTMLElement>('[data-dep-line]')!;
+      const bookBtn = f.querySelector<HTMLButtonElement>('[data-book-btn]')!;
+      let depositNow = 0;
       const field = f.querySelector<HTMLInputElement>('[data-est-field]')!, crewField = f.querySelector<HTMLInputElement>('[data-est-crew]')!;
       f.querySelectorAll<HTMLButtonElement>('[data-addon-toggle]').forEach((b) => b.addEventListener('click', () => {
         const open = b.getAttribute('aria-expanded') !== 'true';
@@ -147,14 +162,22 @@ const addons = [
       f.querySelectorAll<HTMLInputElement>('[data-on]').forEach((c) => c.addEventListener('change', () => {
         const s = el(c.dataset.on!)!; s.disabled = !c.checked; if (c.checked) s.focus();
       }));
+      const inputs = () => ({
+        roofline: num('roof'), stories: num('stories'), steep: on('steep'),
+        treesSmall: num('ts'), treesMedium: num('tm'), shrubs: num('sh'),
+        wreaths: num('wr'), windows: num('wi'), garland: num('ga'),
+        offer: (f.querySelector<HTMLInputElement>('[data-offer]:checked')!.dataset.offer) as OfferKey, rush: on('rush'),
+      });
       const calc = () => {
-        const offer = (f.querySelector<HTMLInputElement>('[data-offer]:checked')!.dataset.offer) as OfferKey;
-        const e = estimate({
-          roofline: num('roof'), stories: num('stories'), steep: on('steep'),
-          treesSmall: num('ts'), treesMedium: num('tm'), shrubs: num('sh'),
-          wreaths: num('wr'), windows: num('wi'), garland: num('ga'), offer, rush: on('rush'),
-        });
+        const inp = inputs(), offer = inp.offer;
+        const e = estimate(inp);
         crewField.value = e.summary;
+        depositNow = on('measure') ? 0 : depositFor(e);
+        depField.value = depositNow ? '$' + depositNow.toLocaleString('en-US') : 'None (measure on site)';
+        depLine.textContent = depositNow
+          ? `Deposit to book: $${depositNow.toLocaleString('en-US')}, ${Math.round(Math.min(pricing.depositRate, 1 / 3) * 100)}% of the low end of your estimate, applied to your total.`
+          : 'Once we have measured, we send your price and a link to pay the deposit. Booking now holds your install window.';
+        bookBtn.textContent = depositNow ? 'Book and pay deposit' : 'Book my install';
         if (on('measure')) {
           out.textContent = 'We will measure';
           note.textContent = `We will measure the roofline on site and send your price. Installations start at ${fmt(pricing.minimum)}.`;
@@ -168,6 +191,43 @@ const addons = [
       f.addEventListener('input', calc);
       f.addEventListener('change', calc);
       calc();
+
+      // Submit: the request always goes to Netlify Forms first (the owner's
+      // email). Booking then opens Stripe Checkout for the deposit; if payments
+      // are not set up, or anything fails, the booking still stands by email.
+      const status = f.querySelector<HTMLElement>('[data-book-status]')!;
+      f.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        const booking = (ev as SubmitEvent).submitter?.hasAttribute('data-book-btn') ?? true;
+        if (!booking) {
+          for (const n of ['name', 'email', 'town']) { const i = f.querySelector<HTMLInputElement>(`[name=${n}]`)!; if (!i.reportValidity()) return; }
+        }
+        const fd = new FormData(f);
+        fd.set('request_type', booking ? 'Booking' + (depositNow ? ' with deposit' : '') : 'Estimate only');
+        if (!booking) { fd.delete('signature'); fd.delete('agreement_accepted'); }
+        const btns = f.querySelectorAll<HTMLButtonElement>('button[type=submit]');
+        btns.forEach((b) => (b.disabled = true));
+        status.textContent = 'Sending...';
+        try {
+          const res = await fetch('/', { method: 'POST', body: new URLSearchParams(fd as unknown as Record<string, string>) });
+          if (!res.ok) throw new Error(String(res.status));
+        } catch {
+          btns.forEach((b) => (b.disabled = false));
+          status.textContent = 'That did not go through. Please check your connection and try again.';
+          return;
+        }
+        if (!booking || !depositNow) { location.href = booking ? '/thank-you/?type=booking' : '/thank-you/?type=estimate'; return; }
+        status.textContent = 'Opening secure payment...';
+        try {
+          const res = await fetch('/.netlify/functions/create-deposit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...inputs(), name: fd.get('name'), email: fd.get('email'), address: fd.get('address'), town: fd.get('town'), window: fd.get('install_window'), signature: fd.get('signature') }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.url) { location.href = data.url; return; }
+        } catch { /* fall through */ }
+        location.href = '/thank-you/?type=booking-pending';
+      });
     }
   </script>
 </Base>

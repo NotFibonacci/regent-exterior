@@ -1,0 +1,33 @@
+---
+// Plain-language booking terms for online holiday lighting bookings.
+// OWNER: have this reviewed by your attorney / MHIC guidance before launch.
+// Bump pricing.agreementVersion whenever the wording changes.
+import Base from '../layouts/Base.astro';
+import { site } from '../config/site';
+import { pricing } from '../config/pricing';
+const pct = Math.round(Math.min(pricing.depositRate, 1 / 3) * 100);
+---
+<Base title="Holiday lighting booking agreement | Regent Exterior Services" description="The terms you agree to when you book holiday lighting online." noindex>
+  <main id="content">
+    <section class="page-intro"><p class="label">Version {pricing.agreementVersion}</p><h1>Holiday lighting <em>booking agreement</em></h1></section>
+    <section class="section prose">
+      <p>This agreement is between you, the homeowner named in your booking, and {site.name}, licensed by the Maryland Home Improvement Commission, {site.license}{site.address ? `, ${site.address}` : ''}. You sign it by typing your name and ticking the box on the booking form.</p>
+      <h2>1. The work</h2>
+      <p>We install the holiday lighting you chose in the online estimator (roofline footage, trees, shrubs and add-ons) under the plan you chose: Single Install, Seasonal Service or Annual Plan, as described on our holiday lighting page. Your booking details are emailed to you and to us when you book.</p>
+      <h2>2. Price</h2>
+      <p>The online estimate is a range. Before install we visit, measure and confirm a final price in writing. Work starts only after you approve that price.</p>
+      <h2>3. Deposit</h2>
+      <p>To book online you pay a deposit of {pct}% of the low end of your estimate. It is never more than one-third of the price, and it is applied in full to your total. The balance is due when the installation is complete.</p>
+      <h2>4. If the confirmed price is higher</h2>
+      <p>If the price we confirm on site is higher than your online estimate and you decide not to go ahead, we refund your deposit in full.</p>
+      <h2>5. Cancelling</h2>
+      <p>You may cancel at any time before we confirm your price on site for a full refund of the deposit. After you approve the confirmed price, the deposit covers lights ordered and crew time already scheduled.</p>
+      <h2>6. Leased lights</h2>
+      <p>With Seasonal Service and the Annual Plan the lights remain ours. We maintain them through the season and take them down afterward. The Annual Plan runs three seasons at the price confirmed in the first season.</p>
+      <h2>7. Your home</h2>
+      <p>We fasten lights with clips and do not drill into, nail into or glue to your roof, gutters, siding or trim. Tell us about anything fragile before install.</p>
+      <h2>8. Questions</h2>
+      <p>Email <a href={`mailto:${site.email}`}>{site.email}</a>{site.phone ? ` or call ${site.phone}` : ''}.</p>
+    </section>
+  </main>
+</Base>
